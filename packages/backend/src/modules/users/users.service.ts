@@ -112,4 +112,59 @@ export class UsersService {
     const result = await this.userModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('User not found');
   }
+
+  async bulkUpdateStatus(ids: string[], isActive: boolean): Promise<number> {
+    const result = await this.userModel.updateMany(
+      { _id: { $in: ids } },
+      { isActive },
+    );
+    return result.modifiedCount;
+  }
+
+  async bulkDelete(ids: string[]): Promise<number> {
+    const result = await this.userModel.deleteMany({ _id: { $in: ids } });
+    return result.deletedCount;
+  }
+
+  async bulkCreate(
+    users: Array<{
+      email: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      phone?: string;
+      batch?: string;
+    }>,
+  ): Promise<{ created: number; errors: Array<{ email: string; error: string }> }> {
+    const results = { created: 0, errors: [] as Array<{ email: string; error: string }> };
+
+    for (const userData of users) {
+      try {
+        const existing = await this.userModel.findOne({ email: userData.email.toLowerCase() });
+        if (existing) {
+          results.errors.push({ email: userData.email, error: 'Email already exists' });
+          continue;
+        }
+
+        const defaultPassword = 'Student@123';
+        const passwordHash = await bcrypt.hash(defaultPassword, 12);
+
+        const user = new this.userModel({
+          ...userData,
+          email: userData.email.toLowerCase(),
+          passwordHash,
+          mustChangePassword: true,
+        });
+        await user.save();
+        results.created++;
+      } catch (err) {
+        results.errors.push({
+          email: userData.email,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return results;
+  }
 }

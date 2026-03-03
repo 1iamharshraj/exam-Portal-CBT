@@ -12,6 +12,7 @@ import { AdminDashboard } from '@/pages/admin/dashboard';
 import { TeacherDashboard } from '@/pages/teacher/dashboard';
 import { StudentDashboard } from '@/pages/student/dashboard';
 import { DashboardRedirect } from '@/pages/dashboard';
+import { UserListPage } from '@/pages/admin/users';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -45,8 +46,8 @@ export const router = createBrowserRouter([
         children: [
           { path: '/admin/dashboard', element: <AdminDashboard /> },
           { path: '/teacher/dashboard', element: <TeacherDashboard /> },
-          // Sprint 3+ routes:
-          // { path: '/users', element: <UserListPage /> },
+          { path: '/users', element: <UserListPage /> },
+          // Sprint 4+ routes:
           // { path: '/questions', element: <QuestionListPage /> },
           // { path: '/tests', element: <TestListPage /> },
           // { path: '/results', element: <ResultsPage /> },

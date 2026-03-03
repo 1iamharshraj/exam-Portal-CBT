@@ -209,10 +209,7 @@ export class AuthService {
   }
 
   private sanitizeUser(user: UserDocument) {
-    const obj = user.toObject();
-    delete obj.passwordHash;
-    delete obj.passwordResetToken;
-    delete obj.passwordResetExpires;
-    return obj;
+    const { passwordHash: _, passwordResetToken: _t, passwordResetExpires: _e, ...rest } = user.toObject();
+    return rest;
   }
 }

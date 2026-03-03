@@ -12,6 +12,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { BulkActionDto } from './dto/bulk-action.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '@exam-portal/shared';
@@ -25,6 +26,31 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
+  }
+
+  @Post('bulk-import')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  bulkImport(
+    @Body() body: { users: Array<{ email: string; firstName: string; lastName: string; role: string; phone?: string; batch?: string }> },
+  ) {
+    return this.usersService.bulkCreate(body.users);
+  }
+
+  @Patch('bulk-status')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  async bulkUpdateStatus(@Body() bulkActionDto: BulkActionDto) {
+    const count = await this.usersService.bulkUpdateStatus(
+      bulkActionDto.ids,
+      bulkActionDto.isActive ?? true,
+    );
+    return { modifiedCount: count };
+  }
+
+  @Delete('bulk-delete')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  async bulkDelete(@Body() body: { ids: string[] }) {
+    const count = await this.usersService.bulkDelete(body.ids);
+    return { deletedCount: count };
   }
 
   @Get()
