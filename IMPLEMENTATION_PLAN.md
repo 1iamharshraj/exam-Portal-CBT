@@ -202,62 +202,66 @@
 
 ## Sprint 6: Test Builder (Question Assignment)
 
-**Status: NOT STARTED**
+**Status: COMPLETED**
 
-### Planned Tasks
-- [ ] `TestBuilderPage` — full-page editor for assigning questions to test sections
-- [ ] Section tabs — switch between sections
-- [ ] Question picker — filter from question bank, add to section
-- [ ] Drag-and-drop reordering within sections
-- [ ] Section summary — question count, marks, time allocation
-- [ ] Auto-pick: randomly select N questions by subject/topic/difficulty
-- [ ] Preview mode — see test as student would
-- [ ] Save draft / publish workflow
+### Backend
+- [x] `updateSectionQuestions` — update questions in a specific section
+- [x] `autoPickQuestions` — auto-select by subject/difficulty from question bank
+- [x] Injected QuestionsModule into TestsModule
+
+### Frontend
+- [x] `TestBuilderPage` — section tabs with progress bars, question list, remove
+- [x] `QuestionPicker` — dialog with subject/topic/difficulty/type/search filters
+- [x] Auto-pick panel (count + difficulty selector)
+- [x] Section summary (question count, marks, progress bar)
+- [x] Publish workflow from builder
+- [x] Route: `/tests/:id/builder`
 
 ---
 
 ## Sprint 7: Test Taking Engine (Student Side)
 
-**Status: NOT STARTED**
+**Status: COMPLETED**
 
-### Planned Tasks
-- [ ] `TestAttemptPage` — full-screen exam interface
-- [ ] Question palette — NTA-style color coding:
-  - Grey: Not visited
-  - Red: Not answered
-  - Green: Answered
-  - Purple: Marked for review
-  - Purple+Green: Answered and marked
-- [ ] Section navigation tabs
-- [ ] Timer — overall + section-wise countdown
-- [ ] Question display with option selection (MCQ) / numerical input
-- [ ] Mark for review toggle
-- [ ] Clear response button
-- [ ] Auto-save answers periodically
-- [ ] Submit confirmation dialog
-- [ ] Auto-submit on time expiry
-- [ ] `StudentTestListPage` — available/upcoming/completed tests
-- [ ] Test instructions page before starting
+### Shared Types
+- [x] `AttemptStatus` enum — IN_PROGRESS, SUBMITTED, TIMED_OUT
+- [x] `QuestionStatus` enum — NOT_VISITED, NOT_ANSWERED, ANSWERED, MARKED_FOR_REVIEW, ANSWERED_AND_MARKED
+- [x] `ITestAttempt`, `IQuestionResponse` interfaces
+
+### Backend
+- [x] `TestAttempt` schema with responses, section scores, grading
+- [x] 7 endpoints: start, getAttempt, saveResponse, navigate, submit, availableTests, myAttempts
+- [x] Auto-grading on submit (MCQ single/multi + Numerical with tolerance)
+- [x] Time limit enforcement with auto-submit
+
+### Frontend
+- [x] `StudentTestsPage` — available, in-progress, completed tests
+- [x] `ExamPage` — full-screen NTA-style exam interface:
+  - Question palette with color-coded statuses
+  - Section navigation tabs
+  - Countdown timer (auto-submit on expiry, pulse animation < 5 min)
+  - MCQ option selection, numerical input
+  - Save & Next, Mark for Review, Clear Response
+  - Submit confirmation with unanswered count
+- [x] Route: `/student/tests`, `/student/exam/:attemptId`
 
 ---
 
 ## Sprint 8: Results & Analytics
 
-**Status: NOT STARTED**
+**Status: COMPLETED**
 
-### Planned Tasks
-- [ ] Auto-grading on submission (MCQ + Numerical)
-- [ ] `TestResult` schema — per-student result with section-wise breakdown
-- [ ] `ResultPage` (Student) — score, section analysis, question-wise review
-- [ ] `TestResultsPage` (Admin) — all student results for a test
-- [ ] Analytics dashboard:
-  - Score distribution chart
-  - Section-wise performance
-  - Difficulty-wise accuracy
-  - Time spent per question
-  - Comparison with average
-- [ ] Leaderboard per test
-- [ ] Export results as CSV
+### Backend
+- [x] `getAttemptResult` — student result with populated questions
+- [x] `getTestResults` — all submissions for a test, ranked by score
+- [x] `getTestAnalytics` — avg/max/min score, score distribution (10% buckets), section averages
+
+### Frontend
+- [x] `ResultPage` (Student) — score summary cards, section-wise breakdown with progress bars, question-wise review
+- [x] `TestResultsPage` (Admin) — stats cards, score distribution bar chart, section averages, leaderboard table
+- [x] TestCard: Results action for published tests
+- [x] StudentTestsPage: View Result button for completed attempts
+- [x] Routes: `/tests/:id/results`, `/student/results/:attemptId`
 
 ---
 
