@@ -4,3 +4,4 @@ export * from './api.types';
 export * from './question.types';
 export * from './test.types';
 export * from './test-attempt.types';
+export * from './batch.types';

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LogOut,
   GraduationCap,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/ui.store';
@@ -34,6 +35,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Users',
     icon: Users,
     path: '/users',
+    roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN],
+  },
+  {
+    label: 'Batches',
+    icon: Layers,
+    path: '/batches',
     roles: [UserRole.SUPER_ADMIN, UserRole.ADMIN],
   },
   {

@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { QuestionsModule } from './modules/questions/questions.module';
 import { TestsModule } from './modules/tests/tests.module';
 import { TestAttemptsModule } from './modules/test-attempts/test-attempts.module';
+import { BatchesModule } from './modules/batches/batches.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -34,6 +35,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     QuestionsModule,
     TestsModule,
     TestAttemptsModule,
+    BatchesModule,
   ],
   providers: [
     {

@@ -20,6 +20,8 @@ import { StudentTestsPage } from '@/pages/student/tests';
 import { ExamPage } from '@/pages/student/tests/exam-page';
 import { ResultPage } from '@/pages/student/tests/result-page';
 import { TestResultsPage } from '@/pages/admin/tests/test-results';
+import { BatchListPage } from '@/pages/admin/batches';
+import { StudentProfilePage } from '@/pages/student/profile';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -58,8 +60,7 @@ export const router = createBrowserRouter([
           { path: '/tests', element: <TestListPage /> },
           { path: '/tests/:id/builder', element: <TestBuilderPage /> },
           { path: '/tests/:id/results', element: <TestResultsPage /> },
-          // Sprint 9+ routes:
-          // { path: '/settings', element: <SettingsPage /> },
+          { path: '/batches', element: <BatchListPage /> },
         ],
       },
 
@@ -70,8 +71,7 @@ export const router = createBrowserRouter([
           { path: '/student/dashboard', element: <StudentDashboard /> },
           { path: '/student/tests', element: <StudentTestsPage /> },
           { path: '/student/results/:attemptId', element: <ResultPage /> },
-          // Sprint 9+ routes:
-          // { path: '/student/profile', element: <StudentProfilePage /> },
+          { path: '/student/profile', element: <StudentProfilePage /> },
         ],
       },
 
