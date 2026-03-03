@@ -63,6 +63,34 @@ export class TestsController {
     return this.testsService.update(id, dto);
   }
 
+  @Patch(':id/sections/:sectionIndex/questions')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
+  updateSectionQuestions(
+    @Param('id') id: string,
+    @Param('sectionIndex') sectionIndex: string,
+    @Body() body: { questionIds: string[] },
+  ) {
+    return this.testsService.updateSectionQuestions(
+      id,
+      parseInt(sectionIndex, 10),
+      body.questionIds,
+    );
+  }
+
+  @Post(':id/sections/:sectionIndex/auto-pick')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
+  autoPickQuestions(
+    @Param('id') id: string,
+    @Param('sectionIndex') sectionIndex: string,
+    @Body() body: { subject?: string; topic?: string; difficultyLevel?: string; count: number },
+  ) {
+    return this.testsService.autoPickQuestions(
+      id,
+      parseInt(sectionIndex, 10),
+      body,
+    );
+  }
+
   @Patch(':id/publish')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
   publish(@Param('id') id: string) {

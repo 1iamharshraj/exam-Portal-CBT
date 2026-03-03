@@ -15,6 +15,7 @@ import { DashboardRedirect } from '@/pages/dashboard';
 import { UserListPage } from '@/pages/admin/users';
 import { QuestionBankPage } from '@/pages/admin/questions';
 import { TestListPage } from '@/pages/admin/tests';
+import { TestBuilderPage } from '@/pages/admin/tests/test-builder';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -51,7 +52,8 @@ export const router = createBrowserRouter([
           { path: '/users', element: <UserListPage /> },
           { path: '/questions', element: <QuestionBankPage /> },
           { path: '/tests', element: <TestListPage /> },
-          // Sprint 6+ routes:
+          { path: '/tests/:id/builder', element: <TestBuilderPage /> },
+          // Sprint 7+ routes:
           // { path: '/results', element: <ResultsPage /> },
           // { path: '/settings', element: <SettingsPage /> },
         ],

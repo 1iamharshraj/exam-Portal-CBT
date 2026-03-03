@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ITest, ICreateTestRequest } from '@exam-portal/shared';
@@ -18,6 +19,7 @@ import { TestCard } from './test-card';
 import { CreateTestDialog } from './create-test-dialog';
 
 export function TestListPage() {
+  const navigate = useNavigate();
   const [tests, setTests] = useState<ITest[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -110,13 +112,11 @@ export function TestListPage() {
   };
 
   const handleView = (test: ITest) => {
-    // TODO: Navigate to test detail/builder page (Sprint 6)
-    toast.info(`View test: ${test.title}`);
+    navigate(`/tests/${test._id}/builder`);
   };
 
   const handleEdit = (test: ITest) => {
-    // TODO: Open edit dialog or navigate to builder (Sprint 6)
-    toast.info(`Edit test: ${test.title}`);
+    navigate(`/tests/${test._id}/builder`);
   };
 
   const handleClearFilters = () => {

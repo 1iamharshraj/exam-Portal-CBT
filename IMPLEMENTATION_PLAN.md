@@ -168,7 +168,7 @@
 
 ## Sprint 5: Test Creation Module
 
-**Status: IN PROGRESS**
+**Status: COMPLETED**
 
 ### Shared Types
 - [x] `ExamType` enum — JEE_MAIN, JEE_ADVANCED, NEET, CUSTOM
@@ -194,9 +194,9 @@
 - [x] `test.service.ts` — API service (getAll, getById, create, update, publish, delete)
 - [x] `TestCard` — status badge, metadata (time, questions, marks, sections), action dropdown
 - [x] `CreateTestDialog` — exam type presets, dynamic section management, marking scheme per section
-- [ ] `TestListPage` — list with status/type filters, pagination, create/publish/delete actions
-- [ ] Route: `/tests` → TestListPage
-- [ ] TypeScript check + fix errors
+- [x] `TestListPage` — list with status/type filters, pagination, create/publish/delete actions
+- [x] Route: `/tests` → TestListPage
+- [x] TypeScript check + fix errors
 
 ---
 
@@ -276,20 +276,41 @@
 
 ---
 
-## Sprint 10: Polish & Deployment
+## Sprint 10: Polish & Deployment (Vercel)
 
 **Status: NOT STARTED**
 
-### Planned Tasks
+### Deployment Architecture
+- **Frontend**: Vercel (static SPA build)
+- **Backend**: Vercel Serverless Functions (NestJS adapter)
+- **Database**: MongoDB Atlas (already configured)
+
+### Vercel Setup
+- [ ] `vercel.json` at project root — monorepo config, routes, rewrites
+- [ ] NestJS Vercel adapter — `@vendia/serverless-express` or `@nestjs/platform-express` for serverless
+- [ ] `packages/backend/api/index.ts` — serverless entry point wrapping NestJS app
+- [ ] Frontend `vite.config.ts` — update API base URL for production (env-based)
+- [ ] Environment variables in Vercel dashboard (MONGODB_URI, JWT secrets, FRONTEND_URL)
+- [ ] CORS config — allow Vercel production domain
+- [ ] Build commands in Vercel project settings:
+  - Frontend: `cd packages/frontend && npm run build` → output `packages/frontend/dist`
+  - Backend: `cd packages/backend && npm run build` → serverless functions
+
+### Performance & Polish
 - [ ] Performance optimization (React.memo, virtualization for large lists)
 - [ ] Error boundaries everywhere
-- [ ] Loading skeletons
+- [ ] Loading skeletons for all pages
 - [ ] Dark mode support
-- [ ] PWA support (offline test taking)
-- [ ] Docker setup (Dockerfile + docker-compose)
-- [ ] CI/CD pipeline (GitHub Actions)
-- [ ] Production deployment (Vercel frontend + Railway/Render backend)
-- [ ] Monitoring + error tracking (Sentry)
+- [ ] SEO meta tags + favicon
+
+### CI/CD
+- [ ] GitHub Actions workflow — lint + type-check + build on PR
+- [ ] Vercel GitHub integration — auto-deploy on push to main
+- [ ] Preview deployments on PRs
+
+### Monitoring
+- [ ] Sentry integration (frontend + backend error tracking)
+- [ ] Vercel Analytics (Web Vitals)
 
 ---
 
@@ -302,7 +323,8 @@
 | Form validation | Zod (shared) + react-hook-form | Shared schemas between FE/BE |
 | Styling | Tailwind + shadcn/ui | Consistent design, easy theming |
 | API layer | Axios with interceptors | Auto token refresh on 401 |
-| Database | MongoDB | Flexible schema for questions/tests |
+| Database | MongoDB Atlas | Flexible schema for questions/tests |
+| Deployment | Vercel (FE + BE serverless) | Zero-config, auto-deploy from GitHub |
 
 ---
 

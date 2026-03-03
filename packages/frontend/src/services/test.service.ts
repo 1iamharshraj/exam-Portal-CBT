@@ -50,4 +50,28 @@ export const testService = {
   delete: async (id: string): Promise<void> => {
     await api.delete(`/tests/${id}`);
   },
+
+  updateSectionQuestions: async (
+    testId: string,
+    sectionIndex: number,
+    questionIds: string[],
+  ): Promise<ITest> => {
+    const { data } = await api.patch(
+      `/tests/${testId}/sections/${sectionIndex}/questions`,
+      { questionIds },
+    );
+    return data.data;
+  },
+
+  autoPickQuestions: async (
+    testId: string,
+    sectionIndex: number,
+    filters: { subject?: string; topic?: string; difficultyLevel?: string; count: number },
+  ): Promise<ITest> => {
+    const { data } = await api.post(
+      `/tests/${testId}/sections/${sectionIndex}/auto-pick`,
+      filters,
+    );
+    return data.data;
+  },
 };
