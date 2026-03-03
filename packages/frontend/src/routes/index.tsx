@@ -16,6 +16,8 @@ import { UserListPage } from '@/pages/admin/users';
 import { QuestionBankPage } from '@/pages/admin/questions';
 import { TestListPage } from '@/pages/admin/tests';
 import { TestBuilderPage } from '@/pages/admin/tests/test-builder';
+import { StudentTestsPage } from '@/pages/student/tests';
+import { ExamPage } from '@/pages/student/tests/exam-page';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -53,7 +55,7 @@ export const router = createBrowserRouter([
           { path: '/questions', element: <QuestionBankPage /> },
           { path: '/tests', element: <TestListPage /> },
           { path: '/tests/:id/builder', element: <TestBuilderPage /> },
-          // Sprint 7+ routes:
+          // Sprint 8+ routes:
           // { path: '/results', element: <ResultsPage /> },
           // { path: '/settings', element: <SettingsPage /> },
         ],
@@ -64,12 +66,15 @@ export const router = createBrowserRouter([
         element: <StudentLayout />,
         children: [
           { path: '/student/dashboard', element: <StudentDashboard /> },
-          // Sprint 12 routes:
-          // { path: '/student/tests', element: <StudentTestsPage /> },
+          { path: '/student/tests', element: <StudentTestsPage /> },
+          // Sprint 8+ routes:
           // { path: '/student/results', element: <StudentResultsPage /> },
           // { path: '/student/profile', element: <StudentProfilePage /> },
         ],
       },
+
+      // Full-screen exam (no layout chrome)
+      { path: '/student/exam/:attemptId', element: <ExamPage /> },
     ],
   },
 
