@@ -7,6 +7,7 @@ import configuration from './config/configuration';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { QuestionsModule } from './modules/questions/questions.module';
+import { TestsModule } from './modules/tests/tests.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
@@ -30,6 +31,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     UsersModule,
     AuthModule,
     QuestionsModule,
+    TestsModule,
   ],
   providers: [
     {

@@ -14,6 +14,7 @@ import { StudentDashboard } from '@/pages/student/dashboard';
 import { DashboardRedirect } from '@/pages/dashboard';
 import { UserListPage } from '@/pages/admin/users';
 import { QuestionBankPage } from '@/pages/admin/questions';
+import { TestListPage } from '@/pages/admin/tests';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -49,8 +50,8 @@ export const router = createBrowserRouter([
           { path: '/teacher/dashboard', element: <TeacherDashboard /> },
           { path: '/users', element: <UserListPage /> },
           { path: '/questions', element: <QuestionBankPage /> },
-          // Sprint 5+ routes:
-          // { path: '/tests', element: <TestListPage /> },
+          { path: '/tests', element: <TestListPage /> },
+          // Sprint 6+ routes:
           // { path: '/results', element: <ResultsPage /> },
           // { path: '/settings', element: <SettingsPage /> },
         ],
