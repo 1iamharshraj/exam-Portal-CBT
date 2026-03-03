@@ -18,6 +18,8 @@ import { TestListPage } from '@/pages/admin/tests';
 import { TestBuilderPage } from '@/pages/admin/tests/test-builder';
 import { StudentTestsPage } from '@/pages/student/tests';
 import { ExamPage } from '@/pages/student/tests/exam-page';
+import { ResultPage } from '@/pages/student/tests/result-page';
+import { TestResultsPage } from '@/pages/admin/tests/test-results';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
@@ -55,8 +57,8 @@ export const router = createBrowserRouter([
           { path: '/questions', element: <QuestionBankPage /> },
           { path: '/tests', element: <TestListPage /> },
           { path: '/tests/:id/builder', element: <TestBuilderPage /> },
-          // Sprint 8+ routes:
-          // { path: '/results', element: <ResultsPage /> },
+          { path: '/tests/:id/results', element: <TestResultsPage /> },
+          // Sprint 9+ routes:
           // { path: '/settings', element: <SettingsPage /> },
         ],
       },
@@ -67,8 +69,8 @@ export const router = createBrowserRouter([
         children: [
           { path: '/student/dashboard', element: <StudentDashboard /> },
           { path: '/student/tests', element: <StudentTestsPage /> },
-          // Sprint 8+ routes:
-          // { path: '/student/results', element: <StudentResultsPage /> },
+          { path: '/student/results/:attemptId', element: <ResultPage /> },
+          // Sprint 9+ routes:
           // { path: '/student/profile', element: <StudentProfilePage /> },
         ],
       },

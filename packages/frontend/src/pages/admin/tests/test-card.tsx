@@ -1,4 +1,4 @@
-import { Calendar, Clock, Users, MoreHorizontal, Eye, Pencil, Trash2, Send } from 'lucide-react';
+import { Calendar, Clock, Users, MoreHorizontal, Eye, Pencil, Trash2, Send, BarChart3 } from 'lucide-react';
 import type { ITest } from '@exam-portal/shared';
 import { TestStatus } from '@exam-portal/shared';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface TestCardProps {
   onEdit: (t: ITest) => void;
   onPublish: (t: ITest) => void;
   onDelete: (t: ITest) => void;
+  onResults?: (t: ITest) => void;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -28,7 +29,7 @@ const STATUS_STYLES: Record<string, string> = {
   [TestStatus.COMPLETED]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
-export function TestCard({ test, onView, onEdit, onPublish, onDelete }: TestCardProps) {
+export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults }: TestCardProps) {
   const totalQuestions = test.sections.reduce((sum, s) => sum + s.questionCount, 0);
 
   const formatDate = (dateStr?: string) => {
@@ -108,6 +109,12 @@ export function TestCard({ test, onView, onEdit, onPublish, onDelete }: TestCard
                 <DropdownMenuItem onClick={() => onPublish(test)}>
                   <Send className="h-4 w-4 mr-2" />
                   Publish
+                </DropdownMenuItem>
+              )}
+              {test.status !== TestStatus.DRAFT && onResults && (
+                <DropdownMenuItem onClick={() => onResults(test)}>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Results
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

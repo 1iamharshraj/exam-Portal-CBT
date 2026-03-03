@@ -39,6 +39,18 @@ export class TestAttemptsController {
     return this.attemptsService.startTest(body.testId, user._id);
   }
 
+  @Get('results/test/:testId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
+  getTestResults(@Param('testId') testId: string) {
+    return this.attemptsService.getTestResults(testId);
+  }
+
+  @Get('analytics/test/:testId')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
+  getTestAnalytics(@Param('testId') testId: string) {
+    return this.attemptsService.getTestAnalytics(testId);
+  }
+
   @Get(':id')
   @Roles(UserRole.STUDENT)
   getAttempt(
@@ -46,6 +58,15 @@ export class TestAttemptsController {
     @CurrentUser() user: { _id: string },
   ) {
     return this.attemptsService.getAttempt(id, user._id);
+  }
+
+  @Get(':id/result')
+  @Roles(UserRole.STUDENT)
+  getResult(
+    @Param('id') id: string,
+    @CurrentUser() user: { _id: string },
+  ) {
+    return this.attemptsService.getAttemptResult(id, user._id);
   }
 
   @Patch(':id/response')

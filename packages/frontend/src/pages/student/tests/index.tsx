@@ -187,9 +187,18 @@ export function StudentTestsPage() {
                       )}
                     </div>
                   </div>
-                  <Badge variant={attempt.status === AttemptStatus.TIMED_OUT ? 'destructive' : 'secondary'}>
-                    {attempt.status === AttemptStatus.TIMED_OUT ? 'Timed Out' : 'Submitted'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={attempt.status === AttemptStatus.TIMED_OUT ? 'destructive' : 'secondary'}>
+                      {attempt.status === AttemptStatus.TIMED_OUT ? 'Timed Out' : 'Submitted'}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/student/results/${attempt._id}`)}
+                    >
+                      View Result
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

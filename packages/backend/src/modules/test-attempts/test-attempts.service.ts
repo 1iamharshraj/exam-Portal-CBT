@@ -303,6 +303,94 @@ export class TestAttemptsService {
       .sort({ createdAt: -1 });
   }
 
+  async getAttemptResult(attemptId: string, studentId?: string) {
+    const attempt = await this.attemptModel
+      .findById(attemptId)
+      .populate({
+        path: 'testId',
+        populate: { path: 'sections.questionIds' },
+      })
+      .populate('studentId', 'firstName lastName email');
+
+    if (!attempt) throw new NotFoundException('Attempt not found');
+    if (studentId && attempt.studentId._id?.toString() !== studentId) {
+      throw new ForbiddenException('Not your attempt');
+    }
+    if (attempt.status === AttemptStatus.IN_PROGRESS) {
+      throw new BadRequestException('Test not yet submitted');
+    }
+    return attempt;
+  }
+
+  async getTestResults(testId: string) {
+    return this.attemptModel
+      .find({
+        testId: new Types.ObjectId(testId),
+        status: { $in: [AttemptStatus.SUBMITTED, AttemptStatus.TIMED_OUT] },
+      })
+      .populate('studentId', 'firstName lastName email batch')
+      .sort({ totalScore: -1 });
+  }
+
+  async getTestAnalytics(testId: string) {
+    const attempts = await this.attemptModel.find({
+      testId: new Types.ObjectId(testId),
+      status: { $in: [AttemptStatus.SUBMITTED, AttemptStatus.TIMED_OUT] },
+    });
+
+    if (attempts.length === 0) return { totalAttempts: 0 };
+
+    const scores = attempts.map((a) => a.totalScore || 0);
+    const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+    const maxScore = Math.max(...scores);
+    const minScore = Math.min(...scores);
+
+    // Score distribution in 10% buckets
+    const test = await this.testModel.findById(testId);
+    const totalMarks = test?.totalMarks || 1;
+    const distribution = Array.from({ length: 10 }, (_, i) => ({
+      range: `${i * 10}-${(i + 1) * 10}%`,
+      count: 0,
+    }));
+    scores.forEach((s) => {
+      const pct = (s / totalMarks) * 100;
+      const bucket = Math.min(9, Math.floor(pct / 10));
+      distribution[bucket].count++;
+    });
+
+    // Section-wise averages
+    const sectionAverages: Array<{
+      sectionIndex: number;
+      avgScore: number;
+      avgCorrect: number;
+      avgIncorrect: number;
+    }> = [];
+
+    if (attempts[0]?.sectionScores?.length) {
+      const numSections = attempts[0].sectionScores.length;
+      for (let i = 0; i < numSections; i++) {
+        const sectionData = attempts
+          .map((a) => a.sectionScores?.find((s) => s.sectionIndex === i))
+          .filter(Boolean);
+        sectionAverages.push({
+          sectionIndex: i,
+          avgScore: sectionData.reduce((sum, s) => sum + (s!.score || 0), 0) / sectionData.length,
+          avgCorrect: sectionData.reduce((sum, s) => sum + (s!.correct || 0), 0) / sectionData.length,
+          avgIncorrect: sectionData.reduce((sum, s) => sum + (s!.incorrect || 0), 0) / sectionData.length,
+        });
+      }
+    }
+
+    return {
+      totalAttempts: attempts.length,
+      avgScore: Math.round(avgScore * 100) / 100,
+      maxScore,
+      minScore,
+      distribution,
+      sectionAverages,
+    };
+  }
+
   async getAvailableTests(studentId: string) {
     // Get tests that are published/active and student hasn't submitted
     const submittedTestIds = await this.attemptModel

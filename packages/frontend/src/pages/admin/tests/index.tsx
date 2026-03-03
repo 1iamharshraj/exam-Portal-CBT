@@ -119,6 +119,10 @@ export function TestListPage() {
     navigate(`/tests/${test._id}/builder`);
   };
 
+  const handleResults = (test: ITest) => {
+    navigate(`/tests/${test._id}/results`);
+  };
+
   const handleClearFilters = () => {
     setSearchInput('');
     setSearch('');
@@ -208,6 +212,7 @@ export function TestListPage() {
               onEdit={handleEdit}
               onPublish={handlePublish}
               onDelete={handleDelete}
+              onResults={handleResults}
             />
           ))}
         </div>

@@ -58,4 +58,31 @@ export const testAttemptService = {
     );
     return data.data;
   },
+
+  getResult: async (attemptId: string): Promise<ITestAttempt> => {
+    const { data } = await api.get(`/test-attempts/${attemptId}/result`);
+    return data.data;
+  },
+
+  getTestResults: async (testId: string): Promise<ITestAttempt[]> => {
+    const { data } = await api.get(`/test-attempts/results/test/${testId}`);
+    return data.data;
+  },
+
+  getTestAnalytics: async (testId: string): Promise<{
+    totalAttempts: number;
+    avgScore?: number;
+    maxScore?: number;
+    minScore?: number;
+    distribution?: Array<{ range: string; count: number }>;
+    sectionAverages?: Array<{
+      sectionIndex: number;
+      avgScore: number;
+      avgCorrect: number;
+      avgIncorrect: number;
+    }>;
+  }> => {
+    const { data } = await api.get(`/test-attempts/analytics/test/${testId}`);
+    return data.data;
+  },
 };
