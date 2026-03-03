@@ -1,20 +1,22 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { UserRole } from '@exam-portal/shared';
+import { PageLoader } from '@/components/common/page-loader';
 
-export function DashboardPage() {
-  const { user } = useAuth();
+export function DashboardRedirect() {
+  const { user, isLoading } = useAuth();
 
-  return (
-    <div>
-      <h1 className="text-2xl font-heading font-semibold mb-4">
-        {user?.role === UserRole.ADMIN && 'Admin Dashboard'}
-        {user?.role === UserRole.TEACHER && 'Teacher Dashboard'}
-        {user?.role === UserRole.STUDENT && 'Student Dashboard'}
-        {user?.role === UserRole.SUPER_ADMIN && 'Super Admin Dashboard'}
-      </h1>
-      <p className="text-muted-foreground">
-        Welcome, {user?.firstName} {user?.lastName}. Dashboard widgets will be built in Sprint 2.
-      </p>
-    </div>
-  );
+  if (isLoading || !user) return <PageLoader />;
+
+  switch (user.role) {
+    case UserRole.SUPER_ADMIN:
+    case UserRole.ADMIN:
+      return <Navigate to="/admin/dashboard" replace />;
+    case UserRole.TEACHER:
+      return <Navigate to="/teacher/dashboard" replace />;
+    case UserRole.STUDENT:
+      return <Navigate to="/student/dashboard" replace />;
+    default:
+      return <Navigate to="/login" replace />;
+  }
 }

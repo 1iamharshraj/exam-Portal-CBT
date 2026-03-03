@@ -1,16 +1,21 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { PublicRoute } from './public-route';
 import { ProtectedRoute } from './protected-route';
 import { AuthLayout } from '@/layouts/auth-layout';
-import { DashboardLayout } from '@/layouts/dashboard-layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
+import { StudentLayout } from '@/components/layout/student-layout';
 import { LoginPage } from '@/pages/auth/login';
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password';
 import { ResetPasswordPage } from '@/pages/auth/reset-password';
 import { ChangePasswordPage } from '@/pages/auth/change-password';
-import { DashboardPage } from '@/pages/dashboard';
+import { AdminDashboard } from '@/pages/admin/dashboard';
+import { TeacherDashboard } from '@/pages/teacher/dashboard';
+import { StudentDashboard } from '@/pages/student/dashboard';
+import { DashboardRedirect } from '@/pages/dashboard';
 import { NotFoundPage } from '@/pages/not-found';
 
 export const router = createBrowserRouter([
+  // Public auth routes
   {
     element: <PublicRoute />,
     children: [
@@ -24,18 +29,46 @@ export const router = createBrowserRouter([
       },
     ],
   },
+
+  // Protected routes
   {
     element: <ProtectedRoute />,
     children: [
       { path: '/change-password', element: <ChangePasswordPage /> },
+
+      // Dashboard redirect based on role
+      { path: '/dashboard', element: <DashboardRedirect /> },
+
+      // Admin/Teacher layout with sidebar
       {
-        element: <DashboardLayout />,
+        element: <AdminLayout />,
         children: [
-          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/admin/dashboard', element: <AdminDashboard /> },
+          { path: '/teacher/dashboard', element: <TeacherDashboard /> },
+          // Sprint 3+ routes:
+          // { path: '/users', element: <UserListPage /> },
+          // { path: '/questions', element: <QuestionListPage /> },
+          // { path: '/tests', element: <TestListPage /> },
+          // { path: '/results', element: <ResultsPage /> },
+          // { path: '/settings', element: <SettingsPage /> },
+        ],
+      },
+
+      // Student layout with top nav
+      {
+        element: <StudentLayout />,
+        children: [
+          { path: '/student/dashboard', element: <StudentDashboard /> },
+          // Sprint 12 routes:
+          // { path: '/student/tests', element: <StudentTestsPage /> },
+          // { path: '/student/results', element: <StudentResultsPage /> },
+          // { path: '/student/profile', element: <StudentProfilePage /> },
         ],
       },
     ],
   },
-  { path: '/', element: <PublicRoute />, children: [{ index: true, element: <LoginPage /> }] },
+
+  // Root redirect
+  { path: '/', element: <Navigate to="/login" replace /> },
   { path: '*', element: <NotFoundPage /> },
 ]);
