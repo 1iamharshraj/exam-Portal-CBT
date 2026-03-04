@@ -26,6 +26,14 @@ import {
   createWebcamProctor,
   type ProctoringEvent,
 } from '@/lib/proctoring';
+import {
+  createWatermarkOverlay,
+  removeWatermarkOverlay,
+  generateSessionHash,
+  extractRollNumber,
+  type WatermarkConfig,
+} from '@/lib/watermark';
+import { useAuthStore } from '@/stores/auth.store';
 
 // ---------------------------------------------------------------------------
 // Pre-exam verification check types
@@ -51,6 +59,7 @@ const STATUS_COLORS: Record<string, string> = {
 export function ExamPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   const [attempt, setAttempt] = useState<ITestAttempt | null>(null);
   const [test, setTest] = useState<ITest | null>(null);
@@ -59,6 +68,7 @@ export function ExamPage() {
   const [webcamActive, setWebcamActive] = useState(false);
   const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
   const webcamProctorRef = useRef<ReturnType<typeof createWebcamProctor> | null>(null);
+  const watermarkRef = useRef<HTMLDivElement | null>(null);
   const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
 
   // Pre-exam verification state
@@ -310,10 +320,15 @@ export function ExamPage() {
     }
   }, [attemptId]);
 
-  const recordViolation = useCallback((reason: string) => {
+  const recordViolation = useCallback((reason: string, type: string = 'other') => {
     violationCountRef.current += 1;
     const count = violationCountRef.current;
     const remaining = MAX_VIOLATIONS - count;
+
+    // Report violation to backend for proctor dashboard
+    if (attemptId) {
+      testAttemptService.recordViolation(attemptId, { type, message: reason }).catch(() => {});
+    }
 
     if (count >= MAX_VIOLATIONS) {
       triggerAutoSubmit();
@@ -328,7 +343,7 @@ export function ExamPage() {
         { duration: 5000 },
       );
     }
-  }, [triggerAutoSubmit]);
+  }, [triggerAutoSubmit, attemptId]);
 
   useEffect(() => {
     if (!examStarted || !attempt || attempt.status !== AttemptStatus.IN_PROGRESS) return;
@@ -336,7 +351,7 @@ export function ExamPage() {
     // 1. Tab switch via visibility API (catches tab changes & minimize)
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        recordViolation('Tab switch detected');
+        recordViolation('Tab switch detected', 'tab_switch');
       }
     };
 
@@ -347,7 +362,7 @@ export function ExamPage() {
       blurTimeout = setTimeout(() => {
         // Only count if visibility didn't already fire (avoid double-counting)
         if (!document.hidden) {
-          recordViolation('Window focus lost — possible app/display switch');
+          recordViolation('Window focus lost — possible app/display switch', 'focus_lost');
         }
       }, 300);
     };
@@ -361,7 +376,7 @@ export function ExamPage() {
     // 3. Fullscreen exit detection
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
-        recordViolation('Exited fullscreen mode');
+        recordViolation('Exited fullscreen mode', 'fullscreen_exit');
       }
     };
 
@@ -423,7 +438,7 @@ export function ExamPage() {
 
     // 10. DevTools detection
     const devToolsDetector = createDevToolsDetector(() => {
-      recordViolation('Developer tools detected');
+      recordViolation('Developer tools detected', 'devtools');
     });
     devToolsDetector.start();
 
@@ -437,9 +452,9 @@ export function ExamPage() {
         webcamVideoRef.current,
         (event: ProctoringEvent) => {
           if (event.type === 'no_face') {
-            recordViolation('No face detected — look at the screen');
+            recordViolation('No face detected — look at the screen', 'no_face');
           } else if (event.type === 'multiple_faces') {
-            recordViolation('Multiple faces detected');
+            recordViolation('Multiple faces detected', 'multiple_faces');
           } else if (event.type === 'face_turned') {
             toast.warning('Please face the screen directly.', { duration: 3000 });
           } else if (event.type === 'camera_denied') {
@@ -449,6 +464,20 @@ export function ExamPage() {
       );
       webcamProctorRef.current = webcamProctor;
       webcamProctor.start().then((ok) => setWebcamActive(ok));
+    }
+
+    // 13. Anti-screenshot watermark overlay
+    let watermarkEl: HTMLDivElement | null = null;
+    if (user) {
+      const config: WatermarkConfig = {
+        studentName: `${user.firstName} ${user.lastName}`,
+        rollNumber: extractRollNumber(user._id),
+        sessionHash: generateSessionHash(),
+        timestamp: new Date().toISOString(),
+      };
+      watermarkEl = createWatermarkOverlay(config, 0.04);
+      document.body.appendChild(watermarkEl);
+      watermarkRef.current = watermarkEl;
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -478,6 +507,10 @@ export function ExamPage() {
       document.body.style.webkitUserSelect = '';
       devToolsDetector.stop();
       cleanupPrintScreen();
+      if (watermarkEl) {
+        removeWatermarkOverlay(watermarkEl);
+        watermarkRef.current = null;
+      }
       if (webcamProctor) {
         webcamProctor.stop();
         webcamProctorRef.current = null;
@@ -487,7 +520,7 @@ export function ExamPage() {
         document.exitFullscreen?.().catch(() => {});
       }
     };
-  }, [examStarted, attempt?.status, recordViolation]);
+  }, [examStarted, attempt?.status, recordViolation, user]);
 
   if (isLoading || !test || !attempt) {
     return (
