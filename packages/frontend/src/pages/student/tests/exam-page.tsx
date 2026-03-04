@@ -1,7 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, Maximize, ShieldCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  Maximize,
+  ShieldCheck,
+  Camera,
+  Monitor,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+} from 'lucide-react';
 import type { ITest, IQuestion, ITestAttempt } from '@exam-portal/shared';
 import { QuestionStatus, AttemptStatus } from '@exam-portal/shared';
 import { Button } from '@/components/ui/button';
@@ -9,6 +18,26 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { testAttemptService } from '@/services/test-attempt.service';
 import { MathRenderer } from '@/components/common/math-renderer';
+import {
+  detectVM,
+  checkBatteryVM,
+  createDevToolsDetector,
+  setupPrintScreenBlocker,
+  createWebcamProctor,
+  type ProctoringEvent,
+} from '@/lib/proctoring';
+
+// ---------------------------------------------------------------------------
+// Pre-exam verification check types
+// ---------------------------------------------------------------------------
+interface VerificationCheck {
+  id: string;
+  label: string;
+  description: string;
+  status: 'pending' | 'running' | 'passed' | 'failed' | 'warning';
+  critical: boolean; // If true, blocks exam start
+  message?: string;
+}
 
 // NTA-style colors
 const STATUS_COLORS: Record<string, string> = {
@@ -27,7 +56,24 @@ export function ExamPage() {
   const [test, setTest] = useState<ITest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
+  const [webcamActive, setWebcamActive] = useState(false);
+  const webcamVideoRef = useRef<HTMLVideoElement | null>(null);
+  const webcamProctorRef = useRef<ReturnType<typeof createWebcamProctor> | null>(null);
   const [activeQuestionIdx, setActiveQuestionIdx] = useState(0);
+
+  // Pre-exam verification state
+  const [verificationChecks, setVerificationChecks] = useState<VerificationCheck[]>([
+    { id: 'fullscreen', label: 'Fullscreen Mode', description: 'Browser can enter fullscreen', status: 'pending', critical: true },
+    { id: 'vm', label: 'Environment Check', description: 'Not running in a virtual machine', status: 'pending', critical: true },
+    { id: 'webcam', label: 'Webcam Access', description: 'Camera is available and permitted', status: 'pending', critical: false },
+    { id: 'devtools', label: 'Developer Tools', description: 'DevTools are closed', status: 'pending', critical: true },
+    { id: 'screen', label: 'Display Check', description: 'Single monitor detected', status: 'pending', critical: false },
+    { id: 'clipboard', label: 'Clipboard Protection', description: 'Copy/paste will be blocked', status: 'pending', critical: false },
+  ]);
+  const [verificationRunning, setVerificationRunning] = useState(false);
+  const [verificationDone, setVerificationDone] = useState(false);
+  const verifyVideoRef = useRef<HTMLVideoElement | null>(null);
+  const verifyStreamRef = useRef<MediaStream | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [numericalInput, setNumericalInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
@@ -112,10 +158,144 @@ export function ExamPage() {
     }
   }, []);
 
+  // --- Pre-exam verification runner ---
+  const updateCheck = useCallback((id: string, update: Partial<VerificationCheck>) => {
+    setVerificationChecks((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...update } : c)),
+    );
+  }, []);
+
+  const runVerification = useCallback(async () => {
+    setVerificationRunning(true);
+
+    // 1. Fullscreen capability check
+    updateCheck('fullscreen', { status: 'running' });
+    try {
+      await document.documentElement.requestFullscreen();
+      // Immediately exit — we'll re-enter on exam start
+      await document.exitFullscreen().catch(() => {});
+      updateCheck('fullscreen', { status: 'passed', message: 'Fullscreen supported' });
+    } catch {
+      updateCheck('fullscreen', {
+        status: 'failed',
+        message: 'Browser blocked fullscreen. Allow fullscreen permission and retry.',
+      });
+    }
+
+    // 2. VM / Environment check
+    updateCheck('vm', { status: 'running' });
+    const vmResult = detectVM();
+    const batterySignal = await checkBatteryVM();
+    if (batterySignal) vmResult.signals.push(batterySignal);
+    const vmIsDetected = vmResult.signals.length >= 2;
+    updateCheck('vm', {
+      status: vmIsDetected ? 'failed' : 'passed',
+      message: vmIsDetected
+        ? `VM detected (${vmResult.confidence}): ${vmResult.signals.slice(0, 2).join('; ')}`
+        : 'Physical machine confirmed',
+    });
+
+    // 3. Webcam check
+    updateCheck('webcam', { status: 'running' });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 320, height: 240, facingMode: 'user' },
+        audio: false,
+      });
+      // Show preview in verification screen
+      if (verifyVideoRef.current) {
+        verifyVideoRef.current.srcObject = stream;
+        await verifyVideoRef.current.play();
+      }
+      verifyStreamRef.current = stream;
+      updateCheck('webcam', { status: 'passed', message: 'Camera accessible' });
+    } catch {
+      updateCheck('webcam', {
+        status: 'warning',
+        message: 'Camera denied — proctoring will be limited',
+      });
+    }
+
+    // 4. DevTools check
+    updateCheck('devtools', { status: 'running' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const widthDiff = window.outerWidth - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+    const devToolsOpen = widthDiff > 160 || heightDiff > 160;
+    updateCheck('devtools', {
+      status: devToolsOpen ? 'failed' : 'passed',
+      message: devToolsOpen
+        ? 'Developer Tools are open. Close them and retry.'
+        : 'DevTools closed',
+    });
+
+    // 5. Display/screen check
+    updateCheck('screen', { status: 'running' });
+    let multiScreen = false;
+    try {
+      if ('getScreenDetails' in window) {
+        const details = await (window as any).getScreenDetails();
+        multiScreen = details.screens.length > 1;
+      }
+    } catch {
+      // Permission denied — skip
+    }
+    updateCheck('screen', {
+      status: multiScreen ? 'warning' : 'passed',
+      message: multiScreen
+        ? 'Multiple monitors detected — disconnect extras for best security'
+        : 'Single display confirmed',
+    });
+
+    // 6. Clipboard (always passes — it's enforced at runtime)
+    updateCheck('clipboard', { status: 'passed', message: 'Will be blocked during exam' });
+
+    setVerificationRunning(false);
+    setVerificationDone(true);
+  }, [updateCheck]);
+
   const handleStartExam = useCallback(() => {
+    // Stop verification camera preview (exam will start its own)
+    if (verifyStreamRef.current) {
+      verifyStreamRef.current.getTracks().forEach((t) => t.stop());
+      verifyStreamRef.current = null;
+    }
     enterFullscreen();
     setExamStarted(true);
   }, [enterFullscreen]);
+
+  // --- Continuous fullscreen enforcement during exam ---
+  useEffect(() => {
+    if (!examStarted || !attempt || attempt.status !== AttemptStatus.IN_PROGRESS) return;
+
+    let reEntryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const enforceFullscreen = () => {
+      if (!document.fullscreenElement) {
+        // Give a brief 2s window, then force re-enter
+        reEntryTimeout = setTimeout(() => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen?.().catch(() => {});
+          }
+        }, 2000);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', enforceFullscreen);
+
+    // Also check periodically in case the event was missed
+    const periodicCheck = setInterval(() => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      }
+    }, 5000);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', enforceFullscreen);
+      if (reEntryTimeout) clearTimeout(reEntryTimeout);
+      clearInterval(periodicCheck);
+    };
+  }, [examStarted, attempt?.status]);
 
   // Auto-submit when violations exceed limit
   const triggerAutoSubmit = useCallback(async () => {
@@ -241,6 +421,36 @@ export function ExamPage() {
       e.preventDefault();
     };
 
+    // 10. DevTools detection
+    const devToolsDetector = createDevToolsDetector(() => {
+      recordViolation('Developer tools detected');
+    });
+    devToolsDetector.start();
+
+    // 11. Print Screen blocker (black overlay on screenshot attempts)
+    const cleanupPrintScreen = setupPrintScreenBlocker();
+
+    // 12. Webcam proctoring
+    let webcamProctor: ReturnType<typeof createWebcamProctor> | null = null;
+    if (webcamVideoRef.current) {
+      webcamProctor = createWebcamProctor(
+        webcamVideoRef.current,
+        (event: ProctoringEvent) => {
+          if (event.type === 'no_face') {
+            recordViolation('No face detected — look at the screen');
+          } else if (event.type === 'multiple_faces') {
+            recordViolation('Multiple faces detected');
+          } else if (event.type === 'face_turned') {
+            toast.warning('Please face the screen directly.', { duration: 3000 });
+          } else if (event.type === 'camera_denied') {
+            toast.error('Camera access denied. Webcam proctoring is unavailable.', { duration: 8000 });
+          }
+        },
+      );
+      webcamProctorRef.current = webcamProctor;
+      webcamProctor.start().then((ok) => setWebcamActive(ok));
+    }
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('copy', blockClipboard);
@@ -266,6 +476,13 @@ export function ExamPage() {
       if (blurTimeout) clearTimeout(blurTimeout);
       document.body.style.userSelect = '';
       document.body.style.webkitUserSelect = '';
+      devToolsDetector.stop();
+      cleanupPrintScreen();
+      if (webcamProctor) {
+        webcamProctor.stop();
+        webcamProctorRef.current = null;
+        setWebcamActive(false);
+      }
       if (document.fullscreenElement) {
         document.exitFullscreen?.().catch(() => {});
       }
@@ -294,40 +511,184 @@ export function ExamPage() {
     );
   }
 
-  // Pre-exam entry screen — requires user click (gesture) so fullscreen API works
+  // Pre-exam verification & entry screen
   if (!examStarted) {
+    const hasAnyFailed = verificationChecks.some((c) => c.critical && c.status === 'failed');
+
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
-        <div className="max-w-md w-full mx-4 space-y-6 text-center">
-          <ShieldCheck className="h-16 w-16 mx-auto text-primary" />
-          <div>
+      <div className="fixed inset-0 flex items-center justify-center bg-background z-50 overflow-y-auto py-8">
+        <div className="max-w-lg w-full mx-4 space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <ShieldCheck className="h-14 w-14 mx-auto text-primary" />
             <h2 className="text-xl font-heading font-semibold">{test.title}</h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               {test.examType.replace('_', ' ')} · {test.totalTimeMinutes} min · {test.totalMarks} marks
             </p>
           </div>
 
+          {/* Exam Rules */}
           <div className="rounded-lg border bg-card p-4 text-left space-y-3">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
               Exam Rules
             </h3>
             <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
-              <li>The exam will open in <strong>fullscreen mode</strong></li>
-              <li>Switching tabs or leaving the window will be detected and logged</li>
-              <li>Copy, paste, and right-click are disabled</li>
-              <li>Do not press F12 or open developer tools</li>
-              <li>The test will auto-submit when time runs out</li>
+              <li>The exam runs in <strong>fullscreen mode</strong> — you cannot exit</li>
+              <li>Switching tabs or leaving the window counts as a violation</li>
+              <li>Copy, paste, right-click, and screenshots are disabled</li>
+              <li>Developer tools must remain closed</li>
+              <li><strong>Webcam access is required</strong> — your face must be visible</li>
+              <li>After <strong>5 violations</strong> your test is auto-submitted</li>
+              <li>The test auto-submits when time runs out</li>
             </ul>
           </div>
 
-          <Button size="lg" className="w-full gap-2" onClick={handleStartExam}>
-            <Maximize className="h-4 w-4" />
-            Enter Fullscreen & Start Exam
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate('/student/tests')}>
-            Go Back
-          </Button>
+          {/* Verification Checklist */}
+          <div className="rounded-lg border bg-card p-4 space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Monitor className="h-4 w-4 text-primary" />
+              System Verification
+              {!verificationDone && !verificationRunning && (
+                <span className="text-xs font-normal text-muted-foreground ml-auto">
+                  Click "Run Checks" to begin
+                </span>
+              )}
+            </h3>
+
+            <div className="space-y-2">
+              {verificationChecks.map((check) => (
+                <div
+                  key={check.id}
+                  className={cn(
+                    'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
+                    check.status === 'passed' && 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20',
+                    check.status === 'failed' && 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20',
+                    check.status === 'warning' && 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20',
+                    (check.status === 'pending' || check.status === 'running') && 'border-muted',
+                  )}
+                >
+                  {/* Status icon */}
+                  <div className="mt-0.5 shrink-0">
+                    {check.status === 'pending' && (
+                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+                    )}
+                    {check.status === 'running' && (
+                      <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                    )}
+                    {check.status === 'passed' && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    )}
+                    {check.status === 'failed' && (
+                      <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    )}
+                    {check.status === 'warning' && (
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    )}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{check.label}</span>
+                      {check.critical && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+                          Required
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {check.message || check.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Webcam preview during verification */}
+            {verificationChecks.find((c) => c.id === 'webcam')?.status === 'passed' && (
+              <div className="flex justify-center pt-2">
+                <video
+                  ref={verifyVideoRef}
+                  muted
+                  playsInline
+                  width={200}
+                  height={150}
+                  className="rounded-lg border shadow-sm"
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="space-y-3">
+            {!verificationDone ? (
+              <Button
+                size="lg"
+                className="w-full gap-2"
+                onClick={runVerification}
+                disabled={verificationRunning}
+              >
+                {verificationRunning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Running Checks...
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="h-4 w-4" />
+                    Run System Checks
+                  </>
+                )}
+              </Button>
+            ) : hasAnyFailed ? (
+              <>
+                <div className="text-center text-sm text-red-600 dark:text-red-400 font-medium">
+                  Some required checks failed. Fix the issues and retry.
+                </div>
+                <Button
+                  size="lg"
+                  className="w-full gap-2"
+                  variant="outline"
+                  onClick={() => {
+                    setVerificationDone(false);
+                    setVerificationChecks((prev) =>
+                      prev.map((c) => ({ ...c, status: 'pending' as const, message: undefined })),
+                    );
+                    // Stop any preview stream
+                    if (verifyStreamRef.current) {
+                      verifyStreamRef.current.getTracks().forEach((t) => t.stop());
+                      verifyStreamRef.current = null;
+                    }
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Re-run Checks
+                </Button>
+              </>
+            ) : (
+              <Button size="lg" className="w-full gap-2" onClick={handleStartExam}>
+                <Maximize className="h-4 w-4" />
+                Enter Fullscreen & Start Exam
+              </Button>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                if (verifyStreamRef.current) {
+                  verifyStreamRef.current.getTracks().forEach((t) => t.stop());
+                  verifyStreamRef.current = null;
+                }
+                navigate('/student/tests');
+              }}
+            >
+              Go Back
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -465,6 +826,24 @@ export function ExamPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background z-50">
+      {/* Webcam preview — small corner feed for proctoring */}
+      <video
+        ref={webcamVideoRef}
+        muted
+        playsInline
+        width={160}
+        height={120}
+        className="fixed bottom-4 right-4 z-[60] rounded-lg border-2 border-primary/30 shadow-lg"
+        style={{ transform: 'scaleX(-1)' }}
+      />
+
+      {/* VM warning banner */}
+      {verificationChecks.find((c) => c.id === 'vm')?.status === 'warning' && (
+        <div className="bg-red-600 text-white text-xs text-center py-1 px-4 shrink-0">
+          VM/Remote Desktop detected — this attempt is flagged for review
+        </div>
+      )}
+
       {/* Top bar */}
       <div className="h-12 border-b bg-card flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-3">
@@ -472,6 +851,16 @@ export function ExamPage() {
           <Badge variant="outline" className="text-xs">
             {test.examType.replace('_', ' ')}
           </Badge>
+          {/* Webcam status indicator */}
+          <div className={cn(
+            'flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full',
+            webcamActive
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+          )}>
+            <Camera className="h-3 w-3" />
+            {webcamActive ? 'CAM ON' : 'CAM OFF'}
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <div className={cn(
