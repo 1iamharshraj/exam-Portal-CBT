@@ -43,6 +43,18 @@ class SectionScore {
   unanswered: number;
 }
 
+@Schema({ _id: false })
+class Violation {
+  @Prop({ required: true })
+  type: string; // 'tab_switch', 'fullscreen_exit', 'focus_lost', 'devtools', 'no_face', 'multiple_faces'
+
+  @Prop({ required: true })
+  message: string;
+
+  @Prop({ required: true })
+  timestamp: Date;
+}
+
 @Schema({ timestamps: true, collection: 'test_attempts' })
 export class TestAttempt {
   @Prop({ type: Types.ObjectId, ref: 'Test', required: true })
@@ -74,6 +86,15 @@ export class TestAttempt {
 
   @Prop({ type: [SectionScore], default: [] })
   sectionScores: SectionScore[];
+
+  @Prop({ type: [Violation], default: [] })
+  violations: Violation[];
+
+  @Prop({ default: 0 })
+  violationCount: number;
+
+  @Prop({ enum: ['low', 'medium', 'high'], default: 'low' })
+  riskLevel: string;
 }
 
 export const TestAttemptSchema = SchemaFactory.createForClass(TestAttempt);
