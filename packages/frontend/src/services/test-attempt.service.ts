@@ -69,6 +69,21 @@ export const testAttemptService = {
     return data.data;
   },
 
+  getStudentAnalytics: async (): Promise<any> => {
+    const { data } = await api.get('/test-attempts/student-analytics');
+    return data.data;
+  },
+
+  getLeaderboard: async (testId: string): Promise<any> => {
+    const { data } = await api.get(`/test-attempts/leaderboard/test/${testId}`);
+    return data.data;
+  },
+
+  getStudentRankings: async (): Promise<any> => {
+    const { data } = await api.get('/test-attempts/student-rankings');
+    return data.data;
+  },
+
   getTestAnalytics: async (testId: string): Promise<{
     totalAttempts: number;
     avgScore?: number;
@@ -83,6 +98,29 @@ export const testAttemptService = {
     }>;
   }> => {
     const { data } = await api.get(`/test-attempts/analytics/test/${testId}`);
+    return data.data;
+  },
+
+  getLiveTestStatus: async (testId: string): Promise<any> => {
+    const { data } = await api.get(`/test-attempts/live-status/test/${testId}`);
+    return data.data;
+  },
+
+  recordViolation: async (
+    attemptId: string,
+    body: { type: string; message: string },
+  ): Promise<any> => {
+    const { data } = await api.patch(
+      `/test-attempts/${attemptId}/violation`,
+      body,
+    );
+    return data.data;
+  },
+
+  forceSubmitAttempt: async (attemptId: string): Promise<any> => {
+    const { data } = await api.post(
+      `/test-attempts/${attemptId}/force-submit`,
+    );
     return data.data;
   },
 };
