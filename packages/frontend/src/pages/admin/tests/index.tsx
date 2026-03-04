@@ -123,6 +123,10 @@ export function TestListPage() {
     navigate(`/tests/${test._id}/results`);
   };
 
+  const handleMonitor = (test: ITest) => {
+    navigate(`/admin/tests/${test._id}/proctor`);
+  };
+
   const handleClearFilters = () => {
     setSearchInput('');
     setSearch('');
@@ -213,6 +217,7 @@ export function TestListPage() {
               onPublish={handlePublish}
               onDelete={handleDelete}
               onResults={handleResults}
+              onMonitor={handleMonitor}
             />
           ))}
         </div>

@@ -135,6 +135,30 @@ export function ExamPage() {
     return () => clearInterval(interval);
   }, [attempt?.status]);
 
+  // Poll attempt status to detect force-submit by proctor
+  useEffect(() => {
+    if (!attemptId || !examStarted || !attempt || attempt.status !== AttemptStatus.IN_PROGRESS) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const latest = await testAttemptService.getAttempt(attemptId);
+        if (latest.status !== AttemptStatus.IN_PROGRESS) {
+          // Proctor force-submitted or status changed externally
+          setAttempt(latest);
+          toast.error('Your test has been submitted by the invigilator.', { duration: 10000 });
+          // Exit fullscreen
+          if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch(() => {});
+          }
+        }
+      } catch {
+        // Network error — skip this poll cycle
+      }
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [attemptId, examStarted, attempt?.status]);
+
   // Load current question's response when navigating
   useEffect(() => {
     if (!attempt || !test) return;

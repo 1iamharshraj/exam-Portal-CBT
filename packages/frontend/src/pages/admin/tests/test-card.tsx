@@ -1,4 +1,4 @@
-import { Calendar, Clock, Users, MoreHorizontal, Eye, Pencil, Trash2, Send, BarChart3 } from 'lucide-react';
+import { Calendar, Clock, Users, MoreHorizontal, Eye, Pencil, Trash2, Send, BarChart3, Radio } from 'lucide-react';
 import type { ITest } from '@exam-portal/shared';
 import { TestStatus } from '@exam-portal/shared';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,7 @@ interface TestCardProps {
   onPublish: (t: ITest) => void;
   onDelete: (t: ITest) => void;
   onResults?: (t: ITest) => void;
+  onMonitor?: (t: ITest) => void;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -29,7 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
   [TestStatus.COMPLETED]: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
-export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults }: TestCardProps) {
+export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults, onMonitor }: TestCardProps) {
   const totalQuestions = test.sections.reduce((sum, s) => sum + s.questionCount, 0);
 
   const formatDate = (dateStr?: string) => {
@@ -44,7 +45,10 @@ export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults 
   };
 
   return (
-    <Card className="hover:shadow-sm transition-shadow">
+    <Card
+      className="hover:shadow-sm hover:border-primary/30 transition-all cursor-pointer"
+      onClick={() => onView(test)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 space-y-2">
@@ -88,6 +92,7 @@ export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults 
             </div>
           </div>
 
+          <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -117,6 +122,12 @@ export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults 
                   Results
                 </DropdownMenuItem>
               )}
+              {(test.status === TestStatus.ACTIVE || test.status === TestStatus.PUBLISHED) && onMonitor && (
+                <DropdownMenuItem onClick={() => onMonitor(test)}>
+                  <Radio className="h-4 w-4 mr-2" />
+                  Live Monitor
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(test)}>
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -124,6 +135,7 @@ export function TestCard({ test, onView, onEdit, onPublish, onDelete, onResults 
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </CardContent>
     </Card>
