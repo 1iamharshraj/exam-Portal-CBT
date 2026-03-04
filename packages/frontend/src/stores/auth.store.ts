@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import axios from 'axios';
 import type { IUser, ILoginRequest } from '@exam-portal/shared';
 import api from '@/lib/api';
 
@@ -52,13 +53,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   checkAuth: async () => {
     try {
-      // Try to refresh token using httpOnly cookie
-      const { data: refreshData } = await api.post('/auth/refresh');
+      // Use raw axios to bypass response interceptor (avoids double-refresh on 401)
+      const { data: refreshData } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
       const newToken = refreshData.data.accessToken;
 
       set({ accessToken: newToken });
 
-      // Fetch user profile
+      // Fetch user profile (use api instance — token is now set)
       const { data: userData } = await api.get('/auth/me');
       set({
         user: userData.data,

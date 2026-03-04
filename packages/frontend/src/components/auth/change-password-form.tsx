@@ -6,6 +6,7 @@ import { Eye, EyeOff, Lock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { changePasswordSchema, type ChangePasswordFormData } from '@exam-portal/shared';
 import api from '@/lib/api';
+import { useAuthStore } from '@/stores/auth.store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ export function ChangePasswordForm() {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
 
   const {
     register,
@@ -34,6 +36,14 @@ export function ChangePasswordForm() {
         oldPassword: data.oldPassword,
         newPassword: data.newPassword,
       });
+
+      // Update user in store so mustChangePassword is cleared
+      if (user) {
+        useAuthStore.setState({
+          user: { ...user, mustChangePassword: false },
+        });
+      }
+
       toast.success('Password changed successfully!');
       navigate('/dashboard', { replace: true });
     } catch (error: any) {
