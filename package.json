@@ -6,15 +6,18 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "test": "turbo run test",
-    "seed": "npm run seed --workspace=@exam-portal/backend",
+    "dev:frontend": "npm run dev -w @exam-portal/frontend",
+    "dev:backend": "npm run dev -w @exam-portal/backend",
+    "build": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/frontend && npm run build -w @exam-portal/backend",
+    "build:shared": "npm run build -w @exam-portal/shared",
+    "build:frontend": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/frontend",
+    "build:backend": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/backend",
+    "lint": "npm run lint -w @exam-portal/frontend -w @exam-portal/backend",
+    "test": "npm run test -w @exam-portal/frontend -w @exam-portal/backend",
+    "seed": "npm run seed -w @exam-portal/backend",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
     "prettier": "^3.2.0",
     "typescript": "^5.4.0"
   }
