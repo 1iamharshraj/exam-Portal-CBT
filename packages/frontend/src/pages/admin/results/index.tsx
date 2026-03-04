@@ -189,7 +189,11 @@ export function AdminResultsPage() {
                 </TableHeader>
                 <TableBody>
                   {tests.map((test) => (
-                    <TableRow key={test._id}>
+                    <TableRow
+                      key={test._id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/tests/${test._id}/results`)}
+                    >
                       <TableCell>
                         <div>
                           <p className="text-sm font-medium">{test.title}</p>
@@ -218,7 +222,7 @@ export function AdminResultsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/tests/${test._id}/results`)}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/tests/${test._id}/results`); }}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View

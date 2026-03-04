@@ -42,7 +42,10 @@ export function QuestionCard({
   onDelete,
 }: QuestionCardProps) {
   return (
-    <div className="flex gap-3 rounded-lg border bg-card p-4 hover:shadow-sm transition-shadow">
+    <div
+      className="flex gap-3 rounded-lg border bg-card p-4 hover:shadow-sm hover:border-primary/30 transition-all cursor-pointer"
+      onClick={() => onPreview(question)}
+    >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
         {index}
       </div>
@@ -72,31 +75,33 @@ export function QuestionCard({
         </div>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onPreview(question)}>
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onEdit(question)}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => onDelete(question)}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onPreview(question)}>
+              <Eye className="h-4 w-4 mr-2" />
+              Preview
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(question)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => onDelete(question)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 }

@@ -89,8 +89,15 @@ export function BatchTable({
         </TableHeader>
         <TableBody>
           {batches.map((batch) => (
-            <TableRow key={batch._id} className={cn(selectedIds.has(batch._id) && 'bg-muted/50')}>
-              <TableCell>
+            <TableRow
+              key={batch._id}
+              className={cn(
+                'cursor-pointer hover:bg-muted/50',
+                selectedIds.has(batch._id) && 'bg-muted/50',
+              )}
+              onClick={() => onEdit(batch)}
+            >
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                   checked={selectedIds.has(batch._id)}
                   onCheckedChange={() => onToggleSelect(batch._id)}
@@ -132,7 +139,7 @@ export function BatchTable({
                   {batch.isActive ? 'Active' : 'Inactive'}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">

@@ -108,8 +108,15 @@ export function UserTable({
             const RoleIcon = roleConfig.icon;
 
             return (
-              <TableRow key={user._id} className={cn(selectedIds.has(user._id) && 'bg-muted/50')}>
-                <TableCell>
+              <TableRow
+                key={user._id}
+                className={cn(
+                  'cursor-pointer hover:bg-muted/50',
+                  selectedIds.has(user._id) && 'bg-muted/50',
+                )}
+                onClick={() => onEdit(user)}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={selectedIds.has(user._id)}
                     onCheckedChange={() => onToggleSelect(user._id)}
@@ -146,7 +153,7 @@ export function UserTable({
                     {user.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
