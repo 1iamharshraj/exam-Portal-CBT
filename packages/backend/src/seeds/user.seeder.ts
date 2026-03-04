@@ -40,7 +40,7 @@ const SEED_USERS: SeedUser[] = [
     role: UserRole.STUDENT,
     phone: `900000010${i + 1}`,
     batch: 'JEE-2026-A',
-    mustChangePassword: true,
+    mustChangePassword: false,
   })),
 ];
 
