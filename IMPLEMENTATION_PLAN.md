@@ -267,22 +267,27 @@
 
 ## Sprint 9: Advanced Features
 
-**Status: NOT STARTED**
+**Status: COMPLETED**
 
-### Planned Tasks
-- [ ] Question image support (S3/Cloudinary upload)
-- [ ] Rich text editor for question text (math equations via KaTeX)
-- [ ] Batch management CRUD
-- [ ] Student profile page
-- [ ] Test scheduling with auto-start/end
-- [ ] Email notifications (SendGrid / Resend)
-- [ ] Activity logs / audit trail
+### Completed
+- [x] Batch management CRUD (full module: list, create/edit dialog, filters, bulk actions)
+- [x] Student profile page (editable profile with form validation)
+- [x] Admin live dashboard (stat cards, charts with Recharts, recent activity)
+- [x] Admin results listing page (test list with search, status/type filters, pagination)
+- [x] Student results listing page (stats cards, search, sort, result cards)
+
+### Deferred to Future Sprints
+- [ ] Question image support (S3/Cloudinary upload) — requires cloud storage setup
+- [ ] Rich text editor for question text (KaTeX) — TipTap integration pending
+- [ ] Test scheduling with auto-start/end — requires backend cron/scheduler
+- [ ] Email notifications (SendGrid/Resend) — backend integration pending
+- [ ] Activity logs / audit trail — backend middleware pending
 
 ---
 
 ## Sprint 10: Polish & Deployment (Vercel)
 
-**Status: NOT STARTED**
+**Status: COMPLETED**
 
 ### Deployment Architecture
 - **Frontend**: Vercel (static SPA build)
@@ -290,31 +295,28 @@
 - **Database**: MongoDB Atlas (already configured)
 
 ### Vercel Setup
-- [ ] `vercel.json` at project root — monorepo config, routes, rewrites
-- [ ] NestJS Vercel adapter — `@vendia/serverless-express` or `@nestjs/platform-express` for serverless
-- [ ] `packages/backend/api/index.ts` — serverless entry point wrapping NestJS app
-- [ ] Frontend `vite.config.ts` — update API base URL for production (env-based)
+- [x] `vercel.json` at project root — monorepo config, routes, rewrites
+- [x] `api/index.ts` — serverless entry point wrapping NestJS app with cached bootstrap
+- [x] Frontend SPA fallback rewrite configured
 - [ ] Environment variables in Vercel dashboard (MONGODB_URI, JWT secrets, FRONTEND_URL)
-- [ ] CORS config — allow Vercel production domain
-- [ ] Build commands in Vercel project settings:
-  - Frontend: `cd packages/frontend && npm run build` → output `packages/frontend/dist`
-  - Backend: `cd packages/backend && npm run build` → serverless functions
+- [ ] CORS config — update `FRONTEND_URL` to Vercel production domain
 
 ### Performance & Polish
-- [ ] Performance optimization (React.memo, virtualization for large lists)
-- [ ] Error boundaries everywhere
-- [ ] Loading skeletons for all pages
-- [ ] Dark mode support
-- [ ] SEO meta tags + favicon
+- [x] Route-level code splitting — `React.lazy` + `Suspense` for all page components
+- [x] Error boundaries — `RouteErrorBoundary` on all route groups (404/403/generic)
+- [x] Loading skeletons — `PageLoader`, `TablePageSkeleton`, `DashboardSkeleton`, `CardListSkeleton`
+- [x] Dark mode support (implemented in Sprint 2)
+- [x] SEO meta tags — description, theme-color, robots, apple-touch-icon
+- [x] Custom favicon (SVG with CBT checkmark icon)
 
 ### CI/CD
-- [ ] GitHub Actions workflow — lint + type-check + build on PR
-- [ ] Vercel GitHub integration — auto-deploy on push to main
-- [ ] Preview deployments on PRs
+- [x] GitHub Actions workflow — type-check + build on push/PR to main
+- [ ] Vercel GitHub integration — auto-deploy on push to main (configure in Vercel dashboard)
+- [ ] Preview deployments on PRs (automatic with Vercel GitHub app)
 
 ### Monitoring
-- [ ] Sentry integration (frontend + backend error tracking)
-- [ ] Vercel Analytics (Web Vitals)
+- [ ] Sentry integration (frontend + backend error tracking) — deferred
+- [ ] Vercel Analytics (Web Vitals) — deferred
 
 ---
 
