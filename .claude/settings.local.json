@@ -37,7 +37,24 @@
       "Bash(npm install katex)",
       "Bash(npm install -D @types/katex)",
       "Bash(curl -s http://localhost:3000/api/v1/auth/login -X POST -H 'Content-Type: application/json' -d '{\"\"email\"\":\"\"admin@examportal.com\"\",\"\"password\"\":\"\"Admin@123\"\"}')",
-      "Bash(python -c \"import sys,json; print\\(''Backend ready'' if json.load\\(sys.stdin\\).get\\(''success''\\) else ''Failed''\\)\")"
+      "Bash(python -c \"import sys,json; print\\(''Backend ready'' if json.load\\(sys.stdin\\).get\\(''success''\\) else ''Failed''\\)\")",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(curl -s http://localhost:3000/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"student@test.com\"\",\"\"password\"\":\"\"password123\"\"}')",
+      "Bash(curl -s http://localhost:5173/src/lib/proctoring.ts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/src/lib/proctoring.ts)",
+      "Bash(curl -s -w \"\\\\nHTTP Status: %{http_code}\" http://localhost:3000/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"student1@school.com\"\",\"\"password\"\":\"\"Student@123\"\"}')",
+      "Bash(curl -s http://localhost:3000/api/v1/users -H \"Authorization: Bearer dummy\")",
+      "Bash(curl -s http://localhost:3000/api/v1/auth/logout -X POST -H \"Content-Type: application/json\")",
+      "Bash(curl -sv http://localhost:5173/api/v1/auth/logout -X POST -H \"Content-Type: application/json\")",
+      "Bash(curl -s http://localhost:3000/api/v1/test-attempts/analytics/test/69a7d78149129e03c8cea428 -H \"Authorization: Bearer test\")",
+      "Bash(curl -s http://localhost:3000/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"admin@admin.com\"\",\"\"password\"\":\"\"Admin@123\"\"}')",
+      "Bash(node -e \"const id=''69a7d78149129e03c8cea428''; console.log\\(''Length:'', id.length\\); console.log\\(''Valid:'', /^[0-9a-fA-F]{24}$/.test\\(id\\)\\)\")",
+      "Bash(tasklist)",
+      "Bash(wmic process where \"name=''node.exe''\" get processid,commandline)",
+      "Bash(ps -W)",
+      "Bash(curl -s http://localhost:3000/api/v1/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"admin@examportal.com\"\",\"\"password\"\":\"\"Admin@123\"\"}')",
+      "Bash(taskkill //IM node.exe //F)"
     ]
   }
 }
