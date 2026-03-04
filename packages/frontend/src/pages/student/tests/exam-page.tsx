@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { AlertTriangle, Maximize, ShieldCheck } from 'lucide-react';
 import type { ITest, IQuestion, ITestAttempt } from '@exam-portal/shared';
 import { QuestionStatus, AttemptStatus } from '@exam-portal/shared';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { testAttemptService } from '@/services/test-attempt.service';
+import { MathRenderer } from '@/components/common/math-renderer';
 
 // NTA-style colors
 const STATUS_COLORS: Record<string, string> = {
@@ -30,6 +32,7 @@ export function ExamPage() {
   const [numericalInput, setNumericalInput] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [examStarted, setExamStarted] = useState(false);
   const questionTimerRef = useRef(0);
 
   const fetchAttempt = useCallback(async () => {
@@ -97,6 +100,178 @@ export function ExamPage() {
     questionTimerRef.current = response?.timeSpent || 0;
   }, [activeSectionIdx, activeQuestionIdx, attempt, test]);
 
+  // --- Anti-malpractice measures ---
+  const violationCountRef = useRef(0);
+  const MAX_VIOLATIONS = 5;
+  const autoSubmitTriggeredRef = useRef(false);
+
+  const enterFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen?.().catch(() => {});
+    }
+  }, []);
+
+  const handleStartExam = useCallback(() => {
+    enterFullscreen();
+    setExamStarted(true);
+  }, [enterFullscreen]);
+
+  // Auto-submit when violations exceed limit
+  const triggerAutoSubmit = useCallback(async () => {
+    if (autoSubmitTriggeredRef.current || !attemptId) return;
+    autoSubmitTriggeredRef.current = true;
+    toast.error('Test auto-submitted due to repeated violations.', { duration: 10000 });
+    try {
+      const result = await testAttemptService.submitTest(attemptId);
+      setAttempt(result);
+    } catch {
+      // ignore
+    }
+  }, [attemptId]);
+
+  const recordViolation = useCallback((reason: string) => {
+    violationCountRef.current += 1;
+    const count = violationCountRef.current;
+    const remaining = MAX_VIOLATIONS - count;
+
+    if (count >= MAX_VIOLATIONS) {
+      triggerAutoSubmit();
+    } else if (remaining <= 2) {
+      toast.error(
+        `${reason} (${count}/${MAX_VIOLATIONS}). ${remaining} more and your test will be auto-submitted!`,
+        { duration: 8000 },
+      );
+    } else {
+      toast.warning(
+        `${reason} (${count}/${MAX_VIOLATIONS}). Do not leave the exam window.`,
+        { duration: 5000 },
+      );
+    }
+  }, [triggerAutoSubmit]);
+
+  useEffect(() => {
+    if (!examStarted || !attempt || attempt.status !== AttemptStatus.IN_PROGRESS) return;
+
+    // 1. Tab switch via visibility API (catches tab changes & minimize)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        recordViolation('Tab switch detected');
+      }
+    };
+
+    // 2. Window blur — catches Alt+Tab, clicking other windows/monitors
+    let blurTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handleWindowBlur = () => {
+      // Small delay to avoid false positives from browser dialogs (confirm, alert)
+      blurTimeout = setTimeout(() => {
+        // Only count if visibility didn't already fire (avoid double-counting)
+        if (!document.hidden) {
+          recordViolation('Window focus lost — possible app/display switch');
+        }
+      }, 300);
+    };
+    const handleWindowFocus = () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+    };
+
+    // 3. Fullscreen exit detection
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        recordViolation('Exited fullscreen mode');
+      }
+    };
+
+    // 4. Detect multiple screens
+    const checkMultipleScreens = async () => {
+      try {
+        if ('getScreenDetails' in window) {
+          const screenDetails = await (window as any).getScreenDetails();
+          if (screenDetails.screens.length > 1) {
+            toast.error(
+              'Multiple displays detected. Please disconnect extra monitors during the exam.',
+              { duration: 10000 },
+            );
+          }
+        } else if (window.screen && window.screen.availWidth > window.screen.width * 1.5) {
+          toast.warning('Extended display may be detected.', { duration: 6000 });
+        }
+      } catch {
+        // Permission denied or API not available — skip
+      }
+    };
+    checkMultipleScreens();
+
+    // 5. Prevent copy/paste/cut
+    const blockClipboard = (e: Event) => {
+      e.preventDefault();
+      toast.warning('Copy/paste is disabled during the exam.', { duration: 2000 });
+    };
+
+    // 6. Block right-click context menu
+    const blockContextMenu = (e: Event) => {
+      e.preventDefault();
+    };
+
+    // 7. Block keyboard shortcuts
+    const blockShortcuts = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      if (
+        (e.ctrlKey && ['c', 'v', 'x', 'u', 'a', 'p', 's'].includes(key)) ||
+        e.key === 'F12' ||
+        e.key === 'F5' ||
+        e.key === 'F11' ||
+        (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) ||
+        (e.altKey && e.key === 'Tab')
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // 8. Block text selection via CSS
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+
+    // 9. Prevent navigating away
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('copy', blockClipboard);
+    document.addEventListener('paste', blockClipboard);
+    document.addEventListener('cut', blockClipboard);
+    document.addEventListener('contextmenu', blockContextMenu);
+    document.addEventListener('keydown', blockShortcuts, true);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('copy', blockClipboard);
+      document.removeEventListener('paste', blockClipboard);
+      document.removeEventListener('cut', blockClipboard);
+      document.removeEventListener('contextmenu', blockContextMenu);
+      document.removeEventListener('keydown', blockShortcuts, true);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (blurTimeout) clearTimeout(blurTimeout);
+      document.body.style.userSelect = '';
+      document.body.style.webkitUserSelect = '';
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    };
+  }, [examStarted, attempt?.status, recordViolation]);
+
   if (isLoading || !test || !attempt) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
@@ -115,6 +290,45 @@ export function ExamPage() {
           </p>
         )}
         <Button onClick={() => navigate('/student/tests')}>Back to Tests</Button>
+      </div>
+    );
+  }
+
+  // Pre-exam entry screen — requires user click (gesture) so fullscreen API works
+  if (!examStarted) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background z-50">
+        <div className="max-w-md w-full mx-4 space-y-6 text-center">
+          <ShieldCheck className="h-16 w-16 mx-auto text-primary" />
+          <div>
+            <h2 className="text-xl font-heading font-semibold">{test.title}</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {test.examType.replace('_', ' ')} · {test.totalTimeMinutes} min · {test.totalMarks} marks
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-card p-4 text-left space-y-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Exam Rules
+            </h3>
+            <ul className="text-xs text-muted-foreground space-y-1.5 list-disc list-inside">
+              <li>The exam will open in <strong>fullscreen mode</strong></li>
+              <li>Switching tabs or leaving the window will be detected and logged</li>
+              <li>Copy, paste, and right-click are disabled</li>
+              <li>Do not press F12 or open developer tools</li>
+              <li>The test will auto-submit when time runs out</li>
+            </ul>
+          </div>
+
+          <Button size="lg" className="w-full gap-2" onClick={handleStartExam}>
+            <Maximize className="h-4 w-4" />
+            Enter Fullscreen & Start Exam
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/student/tests')}>
+            Go Back
+          </Button>
+        </div>
       </div>
     );
   }
@@ -311,9 +525,9 @@ export function ExamPage() {
                   </div>
                 </div>
 
-                <div
+                <MathRenderer
+                  html={(currentQuestion as IQuestion).questionText}
                   className="text-base leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: (currentQuestion as IQuestion).questionText }}
                 />
 
                 {/* Options for MCQ */}
@@ -342,9 +556,9 @@ export function ExamPage() {
                               <div className="h-2 w-2 rounded-full bg-white" />
                             )}
                           </div>
-                          <span className="text-sm">
-                            <strong className="mr-2">{String.fromCharCode(65 + optIdx)}.</strong>
-                            {opt.text}
+                          <span className="text-sm flex items-baseline gap-1">
+                            <strong className="mr-1">{String.fromCharCode(65 + optIdx)}.</strong>
+                            <MathRenderer html={opt.text} className="inline" />
                           </span>
                         </div>
                       );
