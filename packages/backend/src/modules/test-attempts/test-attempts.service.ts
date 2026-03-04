@@ -107,7 +107,7 @@ export class TestAttemptsService {
       .findById(attemptId)
       .populate({
         path: 'testId',
-        populate: { path: 'sections.questionIds' },
+        populate: { path: 'sections.questionIds', model: 'Question' },
       });
     if (!attempt) throw new NotFoundException('Attempt not found');
     if (attempt.studentId.toString() !== studentId) {
@@ -210,7 +210,7 @@ export class TestAttemptsService {
   private async gradeAttempt(attempt: TestAttemptDocument): Promise<void> {
     const test = await this.testModel
       .findById(attempt.testId)
-      .populate('sections.questionIds');
+      .populate({ path: 'sections.questionIds', model: 'Question' });
     if (!test) return;
 
     const sectionScores: Array<{
@@ -308,7 +308,7 @@ export class TestAttemptsService {
       .findById(attemptId)
       .populate({
         path: 'testId',
-        populate: { path: 'sections.questionIds' },
+        populate: { path: 'sections.questionIds', model: 'Question' },
       })
       .populate('studentId', 'firstName lastName email');
 

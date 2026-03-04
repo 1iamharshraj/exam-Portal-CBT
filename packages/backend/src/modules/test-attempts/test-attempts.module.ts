@@ -7,6 +7,7 @@ import {
 import { Test, TestSchema } from '../tests/schemas/test.schema';
 import { TestAttemptsService } from './test-attempts.service';
 import { TestAttemptsController } from './test-attempts.controller';
+import { QuestionsModule } from '../questions/questions.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { TestAttemptsController } from './test-attempts.controller';
       { name: TestAttempt.name, schema: TestAttemptSchema },
       { name: Test.name, schema: TestSchema },
     ]),
+    QuestionsModule,
   ],
   controllers: [TestAttemptsController],
   providers: [TestAttemptsService],
