@@ -333,12 +333,27 @@ export class TestAttemptsService {
   }
 
   async getTestAnalytics(testId: string) {
+    const test = await this.testModel.findById(testId);
+    if (!test) throw new NotFoundException('Test not found');
+
     const attempts = await this.attemptModel.find({
       testId: new Types.ObjectId(testId),
       status: { $in: [AttemptStatus.SUBMITTED, AttemptStatus.TIMED_OUT] },
     });
 
-    if (attempts.length === 0) return { totalAttempts: 0 };
+    if (attempts.length === 0) {
+      return {
+        totalAttempts: 0,
+        avgScore: 0,
+        maxScore: 0,
+        minScore: 0,
+        distribution: Array.from({ length: 10 }, (_, i) => ({
+          range: `${i * 10}-${(i + 1) * 10}%`,
+          count: 0,
+        })),
+        sectionAverages: [],
+      };
+    }
 
     const scores = attempts.map((a) => a.totalScore || 0);
     const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
@@ -346,15 +361,14 @@ export class TestAttemptsService {
     const minScore = Math.min(...scores);
 
     // Score distribution in 10% buckets
-    const test = await this.testModel.findById(testId);
-    const totalMarks = test?.totalMarks || 1;
+    const totalMarks = test.totalMarks || 1;
     const distribution = Array.from({ length: 10 }, (_, i) => ({
       range: `${i * 10}-${(i + 1) * 10}%`,
       count: 0,
     }));
     scores.forEach((s) => {
       const pct = (s / totalMarks) * 100;
-      const bucket = Math.min(9, Math.floor(pct / 10));
+      const bucket = Math.max(0, Math.min(9, Math.floor(pct / 10)));
       distribution[bucket].count++;
     });
 

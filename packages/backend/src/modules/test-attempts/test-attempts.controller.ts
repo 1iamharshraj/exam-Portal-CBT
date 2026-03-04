@@ -47,8 +47,13 @@ export class TestAttemptsController {
 
   @Get('analytics/test/:testId')
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.TEACHER)
-  getTestAnalytics(@Param('testId') testId: string) {
-    return this.attemptsService.getTestAnalytics(testId);
+  async getTestAnalytics(@Param('testId') testId: string) {
+    try {
+      return await this.attemptsService.getTestAnalytics(testId);
+    } catch (err) {
+      console.error('Analytics error:', err);
+      throw err;
+    }
   }
 
   @Get(':id')
