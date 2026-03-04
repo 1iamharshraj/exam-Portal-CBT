@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { questionService } from '@/services/question.service';
+import { MathRenderer } from '@/components/common/math-renderer';
 
 interface QuestionPickerProps {
   open: boolean;
@@ -115,7 +116,6 @@ export function QuestionPicker({
     onClose();
   };
 
-  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
   const isAlreadyAdded = (id: string) => existingIds.includes(id);
 
   return (
@@ -225,9 +225,7 @@ export function QuestionPicker({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm line-clamp-2">
-                        {stripHtml(q.questionText)}
-                      </p>
+                      <MathRenderer html={q.questionText} className="text-sm line-clamp-2" />
                       <div className="flex flex-wrap gap-1.5 mt-1.5">
                         <Badge variant="outline" className="text-[10px]">{q.subject}</Badge>
                         {q.topic && <Badge variant="outline" className="text-[10px]">{q.topic}</Badge>}

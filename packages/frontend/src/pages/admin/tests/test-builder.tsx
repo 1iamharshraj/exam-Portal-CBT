@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { testService } from '@/services/test.service';
+import { MathRenderer } from '@/components/common/math-renderer';
 import { QuestionPicker } from './question-picker';
 
 export function TestBuilderPage() {
@@ -76,14 +77,18 @@ export function TestBuilderPage() {
 
   const handleAddQuestions = async (questions: IQuestion[]) => {
     if (!id || !section) return;
-    const newIds = [...questionIdStrings, ...questions.map((q) => q._id)];
+    const existingSet = new Set(questionIdStrings);
+    const deduped = questions.filter((q) => !existingSet.has(q._id));
+    if (deduped.length === 0) {
+      toast.info('All selected questions are already in this section');
+      return;
+    }
+    const newIds = [...questionIdStrings, ...deduped.map((q) => q._id)];
     setIsSaving(true);
     try {
       const updated = await testService.updateSectionQuestions(id, activeSection, newIds);
       setTest(updated);
-      toast.success(`Added ${questions.length} question(s)`);
-      // Refetch to get populated data
-      fetchTest();
+      toast.success(`Added ${deduped.length} question(s)`);
     } catch {
       toast.error('Failed to add questions');
     } finally {
@@ -99,7 +104,6 @@ export function TestBuilderPage() {
       const updated = await testService.updateSectionQuestions(id, activeSection, newIds);
       setTest(updated);
       toast.success('Question removed');
-      fetchTest();
     } catch {
       toast.error('Failed to remove question');
     } finally {
@@ -118,7 +122,6 @@ export function TestBuilderPage() {
       });
       setTest(updated);
       toast.success('Questions auto-picked');
-      fetchTest();
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
@@ -143,8 +146,6 @@ export function TestBuilderPage() {
       toast.error(message);
     }
   };
-
-  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
 
   const DIFF_COLORS: Record<string, string> = {
     EASY: 'bg-green-100 text-green-700',
@@ -313,7 +314,7 @@ export function TestBuilderPage() {
                       );
                     }
                     return (
-                      <div key={q._id} className="rounded-md border p-3 flex items-start gap-3">
+                      <div key={`${q._id}-${i}`} className="rounded-md border p-3 flex items-start gap-3">
                         <div className="flex items-center gap-1 mt-0.5 shrink-0">
                           <GripVertical className="h-4 w-4 text-muted-foreground/40" />
                           <span className="text-xs font-medium text-muted-foreground w-5">
@@ -321,7 +322,7 @@ export function TestBuilderPage() {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm line-clamp-2">{stripHtml(q.questionText)}</p>
+                          <MathRenderer html={q.questionText} className="text-sm line-clamp-2" />
                           <div className="flex flex-wrap gap-1.5 mt-1.5">
                             <Badge variant="outline" className="text-[10px]">{q.subject}</Badge>
                             {q.topic && (

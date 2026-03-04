@@ -4,6 +4,7 @@ import { QuestionType, DifficultyLevel } from '@exam-portal/shared';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { MathRenderer } from '@/components/common/math-renderer';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,9 +41,6 @@ export function QuestionCard({
   onEdit,
   onDelete,
 }: QuestionCardProps) {
-  // Strip HTML tags for display in list
-  const plainText = question.questionText.replace(/<[^>]*>/g, '').slice(0, 150);
-
   return (
     <div className="flex gap-3 rounded-lg border bg-card p-4 hover:shadow-sm transition-shadow">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
@@ -50,9 +48,7 @@ export function QuestionCard({
       </div>
 
       <div className="flex-1 min-w-0 space-y-2">
-        <p className="text-sm font-medium leading-snug line-clamp-2">
-          {plainText}{plainText.length >= 150 ? '...' : ''}
-        </p>
+        <MathRenderer html={question.questionText} className="text-sm font-medium leading-snug line-clamp-2" />
 
         <div className="flex flex-wrap gap-1.5">
           <Badge variant="secondary" className="text-xs font-normal">

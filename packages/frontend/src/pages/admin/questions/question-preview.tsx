@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { MathRenderer } from '@/components/common/math-renderer';
 
 interface QuestionPreviewProps {
   question: IQuestion | null;
@@ -39,9 +40,9 @@ export function QuestionPreview({ question, open, onClose }: QuestionPreviewProp
 
         <div className="space-y-4">
           {/* Question text */}
-          <div
+          <MathRenderer
+            html={question.questionText}
             className="prose prose-sm dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: question.questionText }}
           />
 
           <Separator />
@@ -64,7 +65,7 @@ export function QuestionPreview({ question, open, onClose }: QuestionPreviewProp
                     <XCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                   )}
                   <span className="font-medium mr-1">{String.fromCharCode(65 + i)}.</span>
-                  <span dangerouslySetInnerHTML={{ __html: opt.text }} />
+                  <MathRenderer html={opt.text} className="inline" />
                 </div>
               ))}
             </div>
@@ -88,9 +89,9 @@ export function QuestionPreview({ question, open, onClose }: QuestionPreviewProp
               <Separator />
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Explanation</p>
-                <div
+                <MathRenderer
+                  html={question.explanation}
                   className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: question.explanation }}
                 />
               </div>
             </>

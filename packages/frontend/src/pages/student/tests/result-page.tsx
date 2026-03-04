@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { testAttemptService } from '@/services/test-attempt.service';
+import { MathRenderer } from '@/components/common/math-renderer';
 
 export function ResultPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
@@ -179,12 +180,12 @@ export function ResultPage() {
                         <div key={qIdx} className="rounded-md border p-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm">
-                                <span className="font-medium mr-1">Q{qIdx + 1}.</span>
+                              <div className="text-sm flex items-baseline gap-1">
+                                <span className="font-medium mr-1 shrink-0">Q{qIdx + 1}.</span>
                                 {isPopulated
-                                  ? (q as IQuestion).questionText.replace(/<[^>]*>/g, '').slice(0, 120)
-                                  : 'Question data unavailable'}
-                              </p>
+                                  ? <MathRenderer html={(q as IQuestion).questionText} className="line-clamp-2" />
+                                  : <span>Question data unavailable</span>}
+                              </div>
                               {isAnswered && response && (
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {response.selectedOptions?.length
