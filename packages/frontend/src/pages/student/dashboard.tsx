@@ -1,22 +1,72 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Clock, ClipboardList, TrendingUp, Award } from 'lucide-react';
+import { toast } from 'sonner';
 import { StatCard } from '@/components/common/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthStore } from '@/stores/auth.store';
+import { testAttemptService } from '@/services/test-attempt.service';
+import type { ITest, ITestAttempt } from '@exam-portal/shared';
+import { AttemptStatus } from '@exam-portal/shared';
 
-const UPCOMING_TESTS = [
-  { id: '1', title: 'JEE Main Mock Test 5', date: 'Mar 5, 2026 at 10:00 AM', duration: '3 hours', type: 'JEE Main' },
-  { id: '2', title: 'NEET Weekly Test 12', date: 'Mar 7, 2026 at 2:00 PM', duration: '3 hours', type: 'NEET' },
-];
-
-const RECENT_RESULTS = [
-  { id: '1', title: 'JEE Main Mock 4', score: '185/300', percentage: '61.7%', rank: '#12' },
-  { id: '2', title: 'Physics Chapter Test', score: '68/100', percentage: '68%', rank: '#5' },
-  { id: '3', title: 'Chemistry Weekly 8', score: '144/180', percentage: '80%', rank: '#3' },
-];
+interface DashboardData {
+  availableTests: ITest[];
+  attempts: ITestAttempt[];
+}
 
 export function StudentDashboard() {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const navigate = useNavigate();
+  const [data, setData] = useState<DashboardData>({ availableTests: [], attempts: [] });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [availableTests, attempts] = await Promise.all([
+          testAttemptService.getAvailableTests(),
+          testAttemptService.getMyAttempts(),
+        ]);
+        setData({ availableTests, attempts });
+      } catch {
+        // Load gracefully
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const completedAttempts = data.attempts.filter(
+    (a) => a.status === AttemptStatus.SUBMITTED || a.status === AttemptStatus.TIMED_OUT,
+  );
+  const inProgressAttempts = data.attempts.filter(
+    (a) => a.status === AttemptStatus.IN_PROGRESS,
+  );
+
+  const testsTaken = completedAttempts.length;
+  const avgScore =
+    completedAttempts.length > 0
+      ? Math.round(
+          completedAttempts.reduce((sum, a) => sum + (a.totalScore ?? 0), 0) /
+            completedAttempts.length,
+        )
+      : 0;
+  const bestScore =
+    completedAttempts.length > 0
+      ? Math.max(...completedAttempts.map((a) => a.totalScore ?? 0))
+      : 0;
+
+  const handleStartTest = async (testId: string) => {
+    try {
+      const attempt = await testAttemptService.startTest(testId);
+      navigate(`/student/exam/${attempt._id}`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to start test');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -34,57 +84,91 @@ export function StudentDashboard() {
         <StatCard
           icon={ClipboardList}
           label="Tests Taken"
-          value="18"
+          value={isLoading ? '...' : String(testsTaken)}
           accentColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
         />
         <StatCard
           icon={TrendingUp}
           label="Avg Score"
-          value="68%"
-          trend="+5%"
-          trendDirection="up"
+          value={isLoading ? '...' : String(avgScore)}
           accentColor="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
         />
         <StatCard
           icon={Award}
-          label="Best Rank"
-          value="#3"
+          label="Best Score"
+          value={isLoading ? '...' : String(bestScore)}
           accentColor="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
         />
         <StatCard
           icon={Clock}
-          label="Upcoming"
-          value="2"
+          label="Available"
+          value={isLoading ? '...' : String(data.availableTests.length)}
           accentColor="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
         />
       </div>
 
-      {/* Upcoming tests */}
+      {/* In-progress attempts */}
+      {inProgressAttempts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Resume Test</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {inProgressAttempts.map((attempt) => (
+                <div key={attempt._id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-4">
+                  <div>
+                    <p className="font-medium">Test in progress</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Started {new Date(attempt.startedAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={() => navigate(`/student/exam/${attempt._id}`)}>
+                    Resume
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Available tests */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Upcoming Tests</CardTitle>
+          <CardTitle className="text-base">Available Tests</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {UPCOMING_TESTS.map((test) => (
-              <div key={test.id} className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">{test.title}</p>
-                  <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {test.date}
-                    </span>
-                    <span>{test.duration}</span>
-                    <span className="bg-secondary px-2 py-0.5 rounded text-foreground font-medium">
-                      {test.type}
-                    </span>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
+          ) : data.availableTests.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No tests available right now
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {data.availableTests.slice(0, 5).map((test) => (
+                <div key={test._id} className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <p className="font-medium">{test.title}</p>
+                    <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {test.totalTimeMinutes} min
+                      </span>
+                      <span>{test.totalMarks} marks</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {test.examType}
+                      </Badge>
+                    </div>
                   </div>
+                  <Button size="sm" onClick={() => handleStartTest(test._id)}>
+                    Start Test
+                  </Button>
                 </div>
-                <Button size="sm">Start Test</Button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -94,19 +178,44 @@ export function StudentDashboard() {
           <CardTitle className="text-base">Recent Results</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {RECENT_RESULTS.map((result) => (
-              <div key={result.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{result.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Score: {result.score} ({result.percentage})
-                  </p>
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
+          ) : completedAttempts.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              No completed tests yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {completedAttempts.slice(0, 5).map((attempt) => (
+                <div
+                  key={attempt._id}
+                  className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/student/results/${attempt._id}`)}
+                >
+                  <div>
+                    <p className="text-sm font-medium">
+                      {attempt.submittedAt
+                        ? new Date(attempt.submittedAt).toLocaleDateString()
+                        : 'Completed'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Score: {attempt.totalScore ?? 0}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={
+                      attempt.status === AttemptStatus.TIMED_OUT
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    }
+                  >
+                    {attempt.status === AttemptStatus.TIMED_OUT ? 'Timed Out' : 'Submitted'}
+                  </Badge>
                 </div>
-                <span className="text-sm font-semibold text-primary">{result.rank}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

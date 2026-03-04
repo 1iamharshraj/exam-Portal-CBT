@@ -1,8 +1,7 @@
+import { useState, useEffect } from 'react';
 import {
   BookOpen,
   ClipboardList,
-  TrendingUp,
-  Users,
   FileCheck,
   Clock,
 } from 'lucide-react';
@@ -17,24 +16,76 @@ import {
 } from 'recharts';
 import { StatCard } from '@/components/common/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/hooks/use-auth';
+import { Badge } from '@/components/ui/badge';
+import { useAuthStore } from '@/stores/auth.store';
+import { questionService, type QuestionStats } from '@/services/question.service';
+import { testService } from '@/services/test.service';
+import type { ITest } from '@exam-portal/shared';
 
-const MY_TESTS_DATA = [
-  { name: 'Mock 1', avgScore: 72 },
-  { name: 'Mock 2', avgScore: 65 },
-  { name: 'Mock 3', avgScore: 78 },
-  { name: 'Mock 4', avgScore: 70 },
-  { name: 'Mock 5', avgScore: 82 },
-];
-
-const RECENT_TESTS = [
-  { id: '1', title: 'Physics Chapter Test - Optics', date: 'Mar 2, 2026', submissions: 42, avgScore: '68%' },
-  { id: '2', title: 'Chemistry Weekly Test 8', date: 'Feb 28, 2026', submissions: 45, avgScore: '72%' },
-  { id: '3', title: 'JEE Main Mock 4', date: 'Feb 25, 2026', submissions: 138, avgScore: '65%' },
-];
+interface DashboardData {
+  totalQuestions: number;
+  totalTests: number;
+  questionStats: QuestionStats | null;
+  recentTests: ITest[];
+}
 
 export function TeacherDashboard() {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const [data, setData] = useState<DashboardData>({
+    totalQuestions: 0,
+    totalTests: 0,
+    questionStats: null,
+    recentTests: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [qStats, testsRes, recentRes] = await Promise.all([
+          questionService.getStats(),
+          testService.getAll({ limit: 1 }),
+          testService.getAll({ limit: 5 }),
+        ]);
+
+        setData({
+          totalQuestions: qStats.total,
+          totalTests: testsRes.total,
+          questionStats: qStats,
+          recentTests: recentRes.data,
+        });
+      } catch {
+        // Load gracefully with zeros
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const difficultyData =
+    data.questionStats?.byDifficulty.map((d) => ({
+      name: d._id.charAt(0).toUpperCase() + d._id.slice(1),
+      count: d.count,
+    })) ?? [];
+
+  const statusLabel = (status: string) => {
+    const map: Record<string, string> = {
+      draft: 'Draft',
+      published: 'Published',
+      active: 'Active',
+      completed: 'Completed',
+    };
+    return map[status] || status;
+  };
+
+  const statusColor = (status: string) => {
+    if (status === 'published' || status === 'active')
+      return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+    if (status === 'completed')
+      return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+    return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+  };
 
   return (
     <div className="space-y-6">
@@ -46,58 +97,57 @@ export function TeacherDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={BookOpen}
-          label="My Questions"
-          value="320"
-          trend="+15"
-          trendDirection="up"
+          label="Total Questions"
+          value={isLoading ? '...' : data.totalQuestions.toLocaleString()}
           accentColor="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
         />
         <StatCard
           icon={ClipboardList}
           label="Tests Created"
-          value="12"
+          value={isLoading ? '...' : data.totalTests.toLocaleString()}
           accentColor="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
         />
-        <StatCard
-          icon={Users}
-          label="My Students"
-          value="89"
-          accentColor="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="Avg Batch Score"
-          value="71%"
-          trend="+5%"
-          trendDirection="up"
-          accentColor="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-        />
+        {(data.questionStats?.bySubject ?? []).slice(0, 2).map((s) => (
+          <StatCard
+            key={s._id}
+            icon={FileCheck}
+            label={`${s._id} Qs`}
+            value={isLoading ? '...' : s.count.toLocaleString()}
+            accentColor="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+          />
+        ))}
       </div>
 
       {/* Chart + Recent tests */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Test Average Scores</CardTitle>
+            <CardTitle className="text-base">Questions by Difficulty</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={MY_TESTS_DATA}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Bar dataKey="avgScore" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Avg %" />
-                </BarChart>
-              </ResponsiveContainer>
+              {difficultyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={difficultyData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                      }}
+                    />
+                    <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Questions" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                  {isLoading ? 'Loading...' : 'No question data yet'}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -107,26 +157,31 @@ export function TeacherDashboard() {
             <CardTitle className="text-base">Recent Tests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {RECENT_TESTS.map((test) => (
-                <div key={test.id} className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{test.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {test.date}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileCheck className="h-3 w-3" />
-                        {test.submissions} submissions
-                      </span>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
+            ) : data.recentTests.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No tests created yet</p>
+            ) : (
+              <div className="space-y-3">
+                {data.recentTests.map((test) => (
+                  <div key={test._id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-sm font-medium">{test.title}</p>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {test.totalTimeMinutes} min
+                        </span>
+                        <span>{test.totalMarks} marks</span>
+                      </div>
                     </div>
+                    <Badge variant="secondary" className={statusColor(test.status)}>
+                      {statusLabel(test.status)}
+                    </Badge>
                   </div>
-                  <span className="text-sm font-semibold text-primary">{test.avgScore}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
