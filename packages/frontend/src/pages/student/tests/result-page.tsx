@@ -48,9 +48,10 @@ export function ResultPage() {
     ? Math.round(((attempt.totalScore || 0) / test.totalMarks) * 100)
     : 0;
 
-  const totalCorrect = attempt.sectionScores?.reduce((s, ss) => s + ss.correct, 0) || 0;
-  const totalIncorrect = attempt.sectionScores?.reduce((s, ss) => s + ss.incorrect, 0) || 0;
-  const totalUnanswered = attempt.sectionScores?.reduce((s, ss) => s + ss.unanswered, 0) || 0;
+  type SectionScore = NonNullable<ITestAttempt['sectionScores']>[number];
+  const totalCorrect = attempt.sectionScores?.reduce((s: number, ss: SectionScore) => s + ss.correct, 0) || 0;
+  const totalIncorrect = attempt.sectionScores?.reduce((s: number, ss: SectionScore) => s + ss.incorrect, 0) || 0;
+  const totalUnanswered = attempt.sectionScores?.reduce((s: number, ss: SectionScore) => s + ss.unanswered, 0) || 0;
 
   return (
     <div className="space-y-6">
