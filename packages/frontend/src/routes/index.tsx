@@ -24,6 +24,7 @@ const QuestionBankPage = lazy(() => import('@/pages/admin/questions').then((m) =
 const TestListPage = lazy(() => import('@/pages/admin/tests').then((m) => ({ default: m.TestListPage })));
 const TestBuilderPage = lazy(() => import('@/pages/admin/tests/test-builder').then((m) => ({ default: m.TestBuilderPage })));
 const TestResultsPage = lazy(() => import('@/pages/admin/tests/test-results').then((m) => ({ default: m.TestResultsPage })));
+const ProctorDashboardPage = lazy(() => import('@/pages/admin/tests/proctor-dashboard').then((m) => ({ default: m.ProctorDashboardPage })));
 const BatchListPage = lazy(() => import('@/pages/admin/batches').then((m) => ({ default: m.BatchListPage })));
 const AdminResultsPage = lazy(() => import('@/pages/admin/results').then((m) => ({ default: m.AdminResultsPage })));
 const SettingsPage = lazy(() => import('@/pages/admin/settings').then((m) => ({ default: m.SettingsPage })));
@@ -33,6 +34,10 @@ const StudentResultsPage = lazy(() => import('@/pages/student/results').then((m)
 const ResultPage = lazy(() => import('@/pages/student/tests/result-page').then((m) => ({ default: m.ResultPage })));
 const StudentProfilePage = lazy(() => import('@/pages/student/profile').then((m) => ({ default: m.StudentProfilePage })));
 const ExamPage = lazy(() => import('@/pages/student/tests/exam-page').then((m) => ({ default: m.ExamPage })));
+const PerformanceAnalyticsPage = lazy(() => import('@/pages/student/results/performance-analytics').then((m) => ({ default: m.PerformanceAnalyticsPage })));
+const LeaderboardPage = lazy(() => import('@/pages/student/results/leaderboard').then((m) => ({ default: m.LeaderboardPage })));
+const SolutionReviewPage = lazy(() => import('@/pages/student/results/solution-review').then((m) => ({ default: m.SolutionReviewPage })));
+const ReportCardPage = lazy(() => import('@/pages/student/results/report-card').then((m) => ({ default: m.ReportCardPage })));
 
 function LazyPage({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -77,6 +82,7 @@ export const router = createBrowserRouter([
           { path: '/tests', element: <LazyPage><TestListPage /></LazyPage> },
           { path: '/tests/:id/builder', element: <LazyPage><TestBuilderPage /></LazyPage> },
           { path: '/tests/:id/results', element: <LazyPage><TestResultsPage /></LazyPage> },
+          { path: '/admin/tests/:id/proctor', element: <LazyPage><ProctorDashboardPage /></LazyPage> },
           { path: '/batches', element: <LazyPage><BatchListPage /></LazyPage> },
           { path: '/results', element: <LazyPage><AdminResultsPage /></LazyPage> },
           { path: '/settings', element: <LazyPage><SettingsPage /></LazyPage> },
@@ -92,6 +98,10 @@ export const router = createBrowserRouter([
           { path: '/student/tests', element: <LazyPage><StudentTestsPage /></LazyPage> },
           { path: '/student/results', element: <LazyPage><StudentResultsPage /></LazyPage> },
           { path: '/student/results/:attemptId', element: <LazyPage><ResultPage /></LazyPage> },
+          { path: '/student/results/:attemptId/review', element: <LazyPage><SolutionReviewPage /></LazyPage> },
+          { path: '/student/results/:attemptId/report', element: <LazyPage><ReportCardPage /></LazyPage> },
+          { path: '/student/analytics', element: <LazyPage><PerformanceAnalyticsPage /></LazyPage> },
+          { path: '/student/leaderboard/:testId', element: <LazyPage><LeaderboardPage /></LazyPage> },
           { path: '/student/profile', element: <LazyPage><StudentProfilePage /></LazyPage> },
         ],
       },
