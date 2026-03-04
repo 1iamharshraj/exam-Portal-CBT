@@ -12,6 +12,6 @@ import { QuestionsController } from './questions.controller';
   ],
   controllers: [QuestionsController],
   providers: [QuestionsService],
-  exports: [QuestionsService],
+  exports: [QuestionsService, MongooseModule],
 })
 export class QuestionsModule {}

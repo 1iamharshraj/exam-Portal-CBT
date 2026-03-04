@@ -31,6 +31,7 @@ export class QuestionsService {
     search?: string;
     tags?: string;
     createdBy?: string;
+    excludeIds?: string[];
     page?: number;
     limit?: number;
   }) {
@@ -43,6 +44,7 @@ export class QuestionsService {
       search,
       tags,
       createdBy,
+      excludeIds,
       page = 1,
       limit = 25,
     } = query;
@@ -56,6 +58,9 @@ export class QuestionsService {
     if (difficultyLevel) filter.difficultyLevel = difficultyLevel;
     if (createdBy) filter.createdBy = new Types.ObjectId(createdBy);
     if (tags) filter.tags = { $in: tags.split(',') };
+    if (excludeIds && excludeIds.length > 0) {
+      filter._id = { $nin: excludeIds.map((id) => new Types.ObjectId(id)) };
+    }
     if (search) {
       filter.$or = [
         { questionText: { $regex: search, $options: 'i' } },

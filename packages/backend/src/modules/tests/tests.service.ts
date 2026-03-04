@@ -68,7 +68,7 @@ export class TestsService {
     const test = await this.testModel
       .findById(id)
       .populate('createdBy', 'firstName lastName')
-      .populate('sections.questionIds');
+      .populate({ path: 'sections.questionIds', model: 'Question' });
     if (!test) throw new NotFoundException('Test not found');
     return test;
   }
@@ -130,7 +130,8 @@ export class TestsService {
     test.sections[sectionIndex].questionIds = questionIds.map(
       (id) => new Types.ObjectId(id),
     );
-    return test.save();
+    await test.save();
+    return this.findById(testId);
   }
 
   async autoPickQuestions(
@@ -146,21 +147,13 @@ export class TestsService {
 
     const section = test.sections[sectionIndex];
     const existingIds = section.questionIds.map((id) => id.toString());
-
-    const query: Record<string, unknown> = { isActive: true };
     const subject = filters.subject || section.subject;
-    if (subject) query.subject = subject;
-    if (filters.topic) query.topic = filters.topic;
-    if (filters.difficultyLevel) query.difficultyLevel = filters.difficultyLevel;
-    if (existingIds.length > 0) {
-      query._id = { $nin: existingIds.map((id) => new Types.ObjectId(id)) };
-    }
 
     const result = await this.questionsService.findAll({
-      ...query,
       subject: subject as string,
       topic: filters.topic,
       difficultyLevel: filters.difficultyLevel,
+      excludeIds: existingIds,
       page: 1,
       limit: filters.count,
     });
@@ -171,6 +164,7 @@ export class TestsService {
       ...newIds.map((id) => new Types.ObjectId(id.toString())),
     ];
 
-    return test.save();
+    await test.save();
+    return this.findById(testId);
   }
 }
