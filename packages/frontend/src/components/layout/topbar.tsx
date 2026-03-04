@@ -31,20 +31,43 @@ function getPageTitle(pathname: string): string {
 
   // Match dynamic routes by prefix
   const segments = pathname.split('/').filter(Boolean);
+  const suffix = segments[segments.length - 1];
+
   if (segments.length >= 2) {
-    // e.g. /tests/:id/builder → "Test Builder", /tests/:id → "Test Details"
     const base = `/${segments[0]}`;
-    const suffix = segments[segments.length - 1];
     const baseTitle = ROUTE_TITLES[base];
     if (baseTitle) {
       if (suffix === 'builder') return 'Test Builder';
+      if (suffix === 'proctor') return 'Live Monitor';
+      if (suffix === 'results') return 'Test Results';
       if (suffix === 'create') return `Create ${baseTitle.replace(' Management', '')}`;
       return baseTitle;
+    }
+
+    // Admin prefixed routes: /admin/tests/:id/proctor
+    if (segments[0] === 'admin') {
+      if (suffix === 'proctor') return 'Live Monitor';
+      if (suffix === 'dashboard') return 'Admin Dashboard';
+      const adminBase = `/${segments[1]}`;
+      if (ROUTE_TITLES[adminBase]) return ROUTE_TITLES[adminBase];
     }
   }
 
   // Student routes
-  if (pathname.startsWith('/student')) return 'Dashboard';
+  if (pathname.startsWith('/student')) {
+    if (suffix === 'dashboard') return 'Student Dashboard';
+    if (suffix === 'tests') return 'My Tests';
+    if (suffix === 'results') return 'My Results';
+    if (suffix === 'analytics') return 'Performance Analytics';
+    if (suffix === 'profile') return 'My Profile';
+    if (suffix === 'review') return 'Solution Review';
+    if (suffix === 'report') return 'Report Card';
+    if (segments.includes('leaderboard')) return 'Leaderboard';
+    return 'Dashboard';
+  }
+
+  // Teacher routes
+  if (pathname.startsWith('/teacher')) return 'Teacher Dashboard';
 
   return 'Dashboard';
 }
