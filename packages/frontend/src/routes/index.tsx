@@ -104,4 +104,9 @@ export const router = createBrowserRouter([
   // Root redirect
   { path: '/', element: <Navigate to="/login" replace /> },
   { path: '*', element: <NotFoundPage /> },
-]);
+], {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  } as any,
+});

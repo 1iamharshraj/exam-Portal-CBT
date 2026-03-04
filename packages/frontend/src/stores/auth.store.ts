@@ -54,9 +54,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkAuth: async () => {
     try {
       // Use raw axios to bypass response interceptor (avoids double-refresh on 401)
-      const { data: refreshData } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
-      const newToken = refreshData.data.accessToken;
+      const { data: refreshData } = await axios.post(
+        '/api/v1/auth/refresh',
+        {},
+        { withCredentials: true, validateStatus: (s) => s < 500 },
+      );
 
+      if (!refreshData?.data?.accessToken) {
+        // No valid session — silently clear auth (not an error)
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      const newToken = refreshData.data.accessToken;
       set({ accessToken: newToken });
 
       // Fetch user profile (use api instance — token is now set)
