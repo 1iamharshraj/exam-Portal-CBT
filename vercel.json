@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/frontend && cp -r packages/frontend/dist ./dist",
+  "buildCommand": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/frontend",
   "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
