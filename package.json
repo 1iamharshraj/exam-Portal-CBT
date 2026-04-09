@@ -6,6 +6,8 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev -w @exam-portal/frontend",
     "dev:backend": "npm run dev -w @exam-portal/backend",
     "build": "npm run build -w @exam-portal/shared && npm run build -w @exam-portal/frontend && npm run build -w @exam-portal/backend",
@@ -18,6 +20,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
+    "concurrently": "^8.2.0",
     "prettier": "^3.2.0",
     "typescript": "^5.4.0"
   }
